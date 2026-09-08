@@ -1,7 +1,8 @@
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { UserProvider } from '../src/context/UserContext';
+import "../global.css";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { UserProvider } from "../src/context/UserContext";
 
 export default function RootLayout() {
   return (
@@ -13,7 +14,10 @@ export default function RootLayout() {
           <Stack.Screen name="welcome" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
-          <Stack.Screen name="register-profile" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="register-profile"
+            options={{ headerShown: false }}
+          />
           <Stack.Screen
             name="workout/[category]"
             options={{ headerShown: false }}
@@ -30,14 +34,8 @@ export default function RootLayout() {
             name="nutrition/detail"
             options={{ headerShown: false }}
           />
-          <Stack.Screen
-            name="profile/edit"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="sleep/input"
-            options={{ headerShown: false }}
-          />
+          <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
+          <Stack.Screen name="sleep/input" options={{ headerShown: false }} />
         </Stack>
       </SafeAreaProvider>
     </UserProvider>
