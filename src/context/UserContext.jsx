@@ -17,7 +17,6 @@ const defaultUser = {
   program: 'bulking',
   targetGoal: 'Lebih bugar dan tidur teratur',
   avatar: null,
-  darkMode: false,
   units: 'metric',
 };
 

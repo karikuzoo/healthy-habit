@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Card, Screen } from '../../src/components';
@@ -18,7 +18,16 @@ function Stat({ label, value }) {
 }
 
 export default function ProfileScreen() {
-  const { user, updateUser, fullName, age, targetCalories, macroTargets } = useUser();
+  const { user, updateUser, logout, fullName, age, targetCalories, macroTargets } = useUser();
+
+  // Tidak perlu navigasi manual: gate isLoggedIn di (tabs)/_layout mengarahkan
+  // ke /welcome begitu status login berubah.
+  const confirmLogout = () => {
+    Alert.alert('Keluar dari akun?', 'Kamu perlu masuk lagi untuk melanjutkan.', [
+      { text: 'Batal', style: 'cancel' },
+      { text: 'Keluar', style: 'destructive', onPress: logout },
+    ]);
+  };
 
   const targetRows = [
     {
@@ -141,15 +150,14 @@ export default function ProfileScreen() {
                 </Text>
               </Pressable>
 
-              <View className="flex-row items-center justify-between border-t border-line-soft py-4">
-                <Text className="text-base text-ink">Dark Mode</Text>
-                <Switch
-                  value={user.darkMode}
-                  onValueChange={(value) => updateUser({ darkMode: value })}
-                  trackColor={{ false: colors.line.DEFAULT, true: colors.brand.DEFAULT }}
-                  thumbColor={colors.surface.DEFAULT}
-                />
-              </View>
+              <Pressable
+                onPress={confirmLogout}
+                accessibilityRole="button"
+                className="flex-row items-center gap-2 border-t border-line-soft py-4 active:opacity-70"
+              >
+                <Ionicons name="log-out-outline" size={20} color={colors.danger.DEFAULT} />
+                <Text className="flex-1 text-base font-semibold text-danger">Keluar</Text>
+              </Pressable>
             </Card>
           </View>
         </View>
