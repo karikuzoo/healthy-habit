@@ -36,19 +36,19 @@ export default function RegisterScreen() {
         <View className="gap-5 px-6 pb-8 pt-2">
           <Field
             label="Nama Depan"
-            placeholder="Padlan"
+            placeholder="Masukkan nama depan"
             value={form.firstName}
             onChangeText={setField('firstName')}
           />
           <Field
             label="Nama Belakang"
-            placeholder="Prabowo"
+            placeholder="Masukkan nama belakang"
             value={form.lastName}
             onChangeText={setField('lastName')}
           />
           <Field
             label="Email"
-            placeholder="prabowoteddy@mail.com"
+            placeholder="email@mail.com"
             value={form.email}
             onChangeText={setField('email')}
             keyboardType="email-address"

@@ -94,7 +94,7 @@ kata sandi, aturan format email, rentang wajar tinggi/berat, batas usia minimum.
 | HOME-1 | Sapaan sesuai waktu + nama depan pengguna | 🚧 teks "Selamat pagi" masih tetap |
 | HOME-2 | Skor harian 0–100 dengan ring progres | 🚧 tampil, rumus belum ada |
 | HOME-3 | Kartu langkah: jumlah, target, persentase, sisa langkah | 🚧 angka masih contoh |
-| HOME-4 | Ringkasan tidur, kalori, dan durasi latihan hari ini | 🚧 kalori dari database, tidur & latihan masih contoh |
+| HOME-4 | Ringkasan tidur, kalori, dan durasi latihan hari ini | 🚧 tidur & kalori dari database, latihan masih contoh |
 | HOME-5 | Kartu rekomendasi harian | 🚧 teks masih tetap |
 
 **HOME-2 perlu keputusan** ❓ — skor harian saat ini angka mati (82). Rumusnya
@@ -130,11 +130,11 @@ Ini menentukan banyak hal, termasuk apakah butuh backend sejak awal.
 | SLEEP-1 | Durasi tidur dengan ring progres terhadap target 8 jam | ✅ |
 | SLEEP-2 | Durasi dihitung dari jam tidur & bangun | ✅ |
 | SLEEP-3 | Penilaian kualitas tidur (Nyenyak/Biasa/Buruk) | ✅ |
-| SLEEP-4 | Tren mingguan berbentuk grafik batang | 🚧 data masih contoh |
-| SLEEP-5 | Input manual jam tidur & bangun | 🚧 tampil, belum bisa diubah |
+| SLEEP-4 | Tren mingguan berbentuk grafik batang | ✅ dari database, hari tanpa catatan tetap tampil |
+| SLEEP-5 | Input manual jam tidur & bangun | ✅ format HH:MM dengan validasi |
 | SLEEP-6 | Catatan opsional | ✅ |
 | SLEEP-7 | Pengingat waktu tidur | 🚧 sakelar ada, notifikasi belum |
-| SLEEP-8 | Menyimpan catatan tidur ke database | ⬜ |
+| SLEEP-8 | Menyimpan catatan tidur ke database | ✅ UPSERT, satu catatan per malam |
 
 **SLEEP-7** butuh `expo-notifications` dan izin notifikasi; belum terpasang.
 
@@ -145,7 +145,7 @@ Ini menentukan banyak hal, termasuk apakah butuh backend sejak awal.
 | WO-1 | Rencana latihan harian dengan ringkasan (kalori, jumlah gerakan, istirahat) | ✅ |
 | WO-2 | Jumlah gerakan diturunkan dari daftar, bukan angka terpisah | ✅ |
 | WO-3 | Katalog gerakan per kategori (Kaki, Dada, Punggung, Inti) | ✅ |
-| WO-4 | Sesi latihan dengan penghitung waktu berjalan | ✅ |
+| WO-4 | Sesi latihan dengan penghitung waktu (play/pause/reset, berbasis jam dinding) | ✅ |
 | WO-5 | Menandai set selesai | ✅ |
 | WO-6 | Estimasi kalori terbakar mengikuti waktu berjalan | 🚧 pendekatan linier sederhana |
 | WO-7 | Menyimpan sesi latihan ke database | ⬜ |

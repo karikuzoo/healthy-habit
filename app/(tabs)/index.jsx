@@ -6,7 +6,8 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { Card, ProgressBar, ProgressRing, Screen, StatTile } from '../../src/components';
 import { colors } from '../../src/theme/colors';
 import { useUser } from '../../src/context/UserContext';
-import { lastNightDuration, formatDuration } from '../../src/data/sleep';
+import { formatDuration } from '../../src/data/sleep';
+import { getSleepForDay } from '../../src/db/sleepLogs';
 import { todayWorkout } from '../../src/data/workout';
 import { dailyTotals } from '../../src/db/foodLogs';
 import { formatNumber } from '../../src/lib/format';
@@ -19,11 +20,15 @@ export default function HomeDashboard() {
   const db = useSQLiteContext();
   const { user } = useUser();
   const [consumed, setConsumed] = useState(EMPTY_TOTALS);
+  const [sleepMinutes, setSleepMinutes] = useState(null);
 
-  // Kalori hari ini dibaca dari log makanan, bukan data statis
+  // Kalori dan tidur hari ini dibaca dari database, bukan data statis
   useFocusEffect(
     useCallback(() => {
       dailyTotals(db, user.id).then(setConsumed);
+      getSleepForDay(db, user.id).then((row) =>
+        setSleepMinutes(row?.durationMinutes ?? null),
+      );
     }, [db, user.id]),
   );
 
@@ -105,7 +110,7 @@ export default function HomeDashboard() {
                 icon="moon"
                 iconColor={colors.sleep.DEFAULT}
                 iconBgClassName="bg-sleep-soft"
-                value={formatDuration(lastNightDuration())}
+                value={sleepMinutes === null ? '—' : formatDuration(sleepMinutes)}
                 label="Tidur"
               />
               <StatTile

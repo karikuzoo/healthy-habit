@@ -1,19 +1,14 @@
-/** Data tidur contoh. Durasi disimpan dalam menit agar mudah dihitung. */
+/**
+ * Data referensi tidur.
+ *
+ * Catatan tidur sendiri hidup di tabel `sleep_logs` (lihat `src/db/sleepLogs.js`);
+ * berkas ini hanya menyimpan hal yang tidak berubah per pengguna, plus util
+ * pengolahan jam.
+ */
+
 export const sleepTargetMinutes = 8 * 60;
 
-/**
- * Satu-satunya sumber data tidur tadi malam.
- *
- * Durasinya tidak disimpan sebagai angka terpisah — selalu dihitung dari
- * `bedtime` dan `wakeTime` lewat `lastNightDuration()`, supaya dashboard,
- * tab Sleep, dan form input tidak pernah menampilkan durasi yang berbeda.
- */
-export const lastNightSleep = {
-  bedtime: '22:45',
-  wakeTime: '06:20',
-  quality: 'nyenyak',
-  notes: '',
-};
+export const bedtimeReminder = '22:30';
 
 export const sleepQualityOptions = [
   { value: 'nyenyak', label: 'Nyenyak', labelEn: 'Good', emoji: '🙂' },
@@ -21,34 +16,27 @@ export const sleepQualityOptions = [
   { value: 'buruk', label: 'Buruk', labelEn: 'Poor', emoji: '☹️' },
 ];
 
-export const weeklyTrend = [
-  { day: 'M', minutes: 380 },
-  { day: 'T', minutes: 425 },
-  { day: 'W', minutes: 400 },
-  { day: 'T', minutes: 470, active: true },
-  { day: 'F', minutes: 440 },
-  { day: 'S', minutes: 415 },
-  { day: 'S', minutes: 435 },
-];
+/** Label kualitas dalam bahasa Inggris, untuk lencana "Sleep Quality". */
+export function qualityLabelEn(value) {
+  return sleepQualityOptions.find((option) => option.value === value)?.labelEn ?? '—';
+}
 
-export const bedtimeReminder = '22:30';
+/** Memeriksa format jam "HH:MM" sekaligus rentang jam & menitnya. */
+export function isValidTime(value) {
+  if (!/^\d{2}:\d{2}$/.test(value ?? '')) return false;
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59;
+}
 
-/** Selisih dua jam "HH:MM", memperhitungkan pergantian hari. */
+/**
+ * Selisih dua jam "HH:MM" dalam menit, memperhitungkan pergantian hari —
+ * tidur pukul 22:45 dan bangun 06:20 berarti 455 menit, bukan negatif.
+ */
 export function minutesBetween(start, end) {
   const [startHour, startMin] = start.split(':').map(Number);
   const [endHour, endMin] = end.split(':').map(Number);
   const diff = endHour * 60 + endMin - (startHour * 60 + startMin);
   return diff < 0 ? diff + 24 * 60 : diff;
-}
-
-/** Durasi tidur tadi malam dalam menit. */
-export function lastNightDuration() {
-  return minutesBetween(lastNightSleep.bedtime, lastNightSleep.wakeTime);
-}
-
-/** Label kualitas tidur dalam bahasa Inggris, untuk badge "Sleep Quality". */
-export function qualityLabelEn(value = lastNightSleep.quality) {
-  return sleepQualityOptions.find((option) => option.value === value)?.labelEn ?? '—';
 }
 
 /** 455 -> "7j 35m" */
@@ -63,4 +51,14 @@ export function formatDurationEn(minutes) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours}h ${mins.toString().padStart(2, '0')}m`;
+}
+
+/**
+ * Menormalkan ketikan pengguna menjadi "HH:MM" sambil diketik:
+ * "2245" -> "22:45", "2" -> "2", "225" -> "22:5".
+ */
+export function normalizeTimeInput(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
 }

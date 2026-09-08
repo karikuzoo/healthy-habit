@@ -11,6 +11,7 @@ import { id as idLocale } from 'date-fns/locale';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Loading } from '../components/Loading';
 import { seedDemoDayIfEmpty } from '../db/foodLogs';
+import { seedDemoWeekIfEmpty } from '../db/sleepLogs';
 import { ensureUser, updateUserRow } from '../db/users';
 
 const UserContext = createContext(null);
@@ -50,6 +51,7 @@ export function UserProvider({ children }) {
       // Sementara, sampai pencarian makanan (NUT-6) tersedia — hapus bersama
       // `seedDemoDayIfEmpty` begitu makanan bisa dicari sendiri.
       await seedDemoDayIfEmpty(db, row.id);
+      await seedDemoWeekIfEmpty(db, row.id);
       if (active) setUser(row);
     })();
 
