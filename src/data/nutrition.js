@@ -6,24 +6,6 @@
  * ringkasan tidak pernah lagi berbeda dari isinya.
  */
 
-/**
- * Target harian per program.
- *
- * Angka ini disimpan eksplisit, bukan diturunkan dari BMR/TDEE: nilai pada
- * mockup (2.400 kkal, P150/C250/F80) tidak bisa dihasilkan rumus apa pun untuk
- * tubuh user contoh, jadi tabel ini menjaga tampilan tetap sesuai desain
- * sekaligus membuat target ikut berubah saat program diganti.
- */
-export const programTargets = {
-  bulking: { calories: 2400, protein: 150, carbs: 250, fat: 80 },
-  maintenance: { calories: 2000, protein: 130, carbs: 200, fat: 67 },
-  cutting: { calories: 1700, protein: 150, carbs: 140, fat: 50 },
-};
-
-export function targetsFor(program) {
-  return programTargets[program] ?? programTargets.maintenance;
-}
-
 export const meals = [
   {
     id: 'sarapan',

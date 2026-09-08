@@ -14,7 +14,7 @@ import { activityLevels, genders, programs } from '../src/data/profile';
 import { useUser } from '../src/context/UserContext';
 
 export default function RegisterProfileScreen() {
-  const { user, updateUser, login } = useUser();
+  const { user, updateUser, login, birthDateLabel } = useUser();
   const [activityLevel, setActivityLevel] = useState(user.activityLevel);
   const [gender, setGender] = useState(user.gender);
   const [height, setHeight] = useState('');
@@ -50,7 +50,7 @@ export default function RegisterProfileScreen() {
           <SelectField
             label="Tanggal lahir"
             icon="calendar-outline"
-            value={user.birthDate}
+            value={birthDateLabel}
             placeholder="Pilih tanggal lahir"
           />
 

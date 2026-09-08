@@ -18,7 +18,7 @@ function Stat({ label, value }) {
 }
 
 export default function ProfileScreen() {
-  const { user, updateUser, fullName, targetCalories, macroTargets } = useUser();
+  const { user, updateUser, fullName, age, targetCalories, macroTargets } = useUser();
 
   const targetRows = [
     {
@@ -54,7 +54,7 @@ export default function ProfileScreen() {
             <Text className="text-2xl font-bold text-ink">{fullName}</Text>
 
             <View className="w-full flex-row">
-              <Stat label="AGE" value={user.age} />
+              <Stat label="AGE" value={age} />
               <Stat label="WEIGHT" value={`${user.weight} kg`} />
               <Stat label="HEIGHT" value={`${user.height} cm`} />
             </View>
