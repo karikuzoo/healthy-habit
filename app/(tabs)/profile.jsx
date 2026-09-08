@@ -1,305 +1,159 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React from 'react';
+import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import Colors from '../../src/constants/colors';
+import { Card, Screen } from '../../src/components';
+import { colors } from '../../src/theme/colors';
+import { programs, programLabel } from '../../src/data/profile';
+import { formatNumber } from '../../src/lib/format';
 import { useUser } from '../../src/context/UserContext';
 
-export default function ProfileScreen() {
-  const [activeProgram, setActiveProgram] = useState('bulking');
-  const [darkMode, setDarkMode] = useState(false);
-
+function Stat({ label, value }) {
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <View />
-          <TouchableOpacity onPress={() => router.push('/profile/edit')} style={styles.editButton}>
-            <Ionicons name="pencil" size={24} color="#1B4332" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.profileSection}>
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={50} color="#ccc" />
-          </View>
-          <Text style={styles.name}>Padlan Prabowo</Text>
-          
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>AGE</Text>
-              <Text style={styles.statValue}>28</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>WEIGHT</Text>
-              <Text style={styles.statValue}>78 kg</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>HEIGHT</Text>
-              <Text style={styles.statValue}>182 cm</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Active Program</Text>
-          <View style={styles.programRow}>
-            <TouchableOpacity 
-              style={[styles.programCard, activeProgram === 'bulking' && styles.programCardActive]}
-              onPress={() => setActiveProgram('bulking')}
-            >
-              <Ionicons name="trending-up" size={20} color={activeProgram === 'bulking' ? '#fff' : '#1B4332'} />
-              <Text style={[styles.programText, activeProgram === 'bulking' && styles.programTextActive]}>Bulking</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.programCard, activeProgram === 'maintenance' && styles.programCardActive]}
-              onPress={() => setActiveProgram('maintenance')}
-            >
-              <Ionicons name="scale" size={20} color={activeProgram === 'maintenance' ? '#fff' : '#1B4332'} />
-              <Text style={[styles.programText, activeProgram === 'maintenance' && styles.programTextActive]}>Maintenance</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.programCard, activeProgram === 'cutting' && styles.programCardActive]}
-              onPress={() => setActiveProgram('cutting')}
-            >
-              <Ionicons name="trending-down" size={20} color={activeProgram === 'cutting' ? '#fff' : '#1B4332'} />
-              <Text style={[styles.programText, activeProgram === 'cutting' && styles.programTextActive]}>Cutting</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Daily Bulking Targets</Text>
-          <View style={styles.card}>
-            <View style={styles.targetRow}>
-              <View style={[styles.dot, { backgroundColor: '#FF6B6B' }]} />
-              <Text style={styles.targetLabel}>Calories</Text>
-              <Text style={styles.targetValue}>2,400 kcal</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.targetRow}>
-              <View style={[styles.dot, { backgroundColor: '#4DABF7' }]} />
-              <Text style={styles.targetLabel}>Protein</Text>
-              <Text style={styles.targetValue}>150g</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.targetRow}>
-              <View style={[styles.dot, { backgroundColor: '#FCC419' }]} />
-              <Text style={styles.targetLabel}>Carbs</Text>
-              <Text style={styles.targetValue}>250g</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.targetRow}>
-              <View style={[styles.dot, { backgroundColor: '#B197FC' }]} />
-              <Text style={styles.targetLabel}>Fat</Text>
-              <Text style={styles.targetValue}>80g</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <View style={styles.card}>
-            <TouchableOpacity style={styles.settingsRow}>
-              <Text style={styles.settingsLabel}>Notification Preferences</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-            <View style={styles.divider} />
-            
-            <TouchableOpacity style={styles.settingsRow}>
-              <Text style={styles.settingsLabel}>Units (kg/lbs)</Text>
-              <Text style={styles.settingsValue}>Metric (kg)</Text>
-            </TouchableOpacity>
-            <View style={styles.divider} />
-            
-            <View style={styles.settingsRow}>
-              <Text style={styles.settingsLabel}>Dark Mode</Text>
-              <Switch
-                value={darkMode}
-                onValueChange={setDarkMode}
-                trackColor={{ false: '#767577', true: Colors.primary || '#1B4332' }}
-                thumbColor={'#fff'}
-              />
-            </View>
-          </View>
-        </View>
-
-      </ScrollView>
-    </SafeAreaView>
+    <View className="flex-1 items-center">
+      <Text className="text-2xs font-bold tracking-widest text-ink-muted">{label}</Text>
+      <Text className="mt-1 text-base font-bold text-ink">{value}</Text>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background || '#F7F9F2',
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  editButton: {
-    padding: 8,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  profileSection: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1B4332',
-    marginBottom: 20,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    width: '100%',
-  },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#E0E0E0',
-  },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#666',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1B4332',
-  },
-  section: {
-    marginBottom: 30,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1B4332',
-    marginBottom: 16,
-  },
-  programRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  programCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    marginHorizontal: 4,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  programCardActive: {
-    backgroundColor: '#1B4332',
-  },
-  programText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1B4332',
-    marginTop: 8,
-  },
-  programTextActive: {
-    color: '#fff',
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  targetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
-  },
-  targetLabel: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
-  },
-  targetValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1B4332',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F0F0F0',
-  },
-  settingsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  settingsLabel: {
-    fontSize: 16,
-    color: '#333',
-  },
-  settingsValue: {
-    fontSize: 16,
-    color: '#666',
-  },
-});
+export default function ProfileScreen() {
+  const { user, updateUser, fullName, targetCalories, macroTargets } = useUser();
+
+  const targetRows = [
+    {
+      label: 'Calories',
+      value: `${formatNumber(targetCalories)} kkal`,
+      color: colors.macro.calories,
+    },
+    { label: 'Protein', value: `${macroTargets.protein}g`, color: colors.macro.protein },
+    { label: 'Carbs', value: `${macroTargets.carbs}g`, color: colors.macro.carbs },
+    { label: 'Fat', value: `${macroTargets.fat}g`, color: colors.macro.fat },
+  ];
+
+  return (
+    <Screen>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View className="gap-6 px-5 pb-8 pt-2">
+          <View className="flex-row justify-end">
+            <Pressable
+              onPress={() => router.push('/profile/edit')}
+              accessibilityRole="button"
+              accessibilityLabel="Edit profil"
+              hitSlop={8}
+              className="h-10 w-10 items-center justify-center rounded-full bg-surface active:opacity-70"
+            >
+              <Ionicons name="create-outline" size={22} color={colors.brand.DEFAULT} />
+            </Pressable>
+          </View>
+
+          <View className="items-center gap-4">
+            <View className="h-24 w-24 items-center justify-center rounded-full bg-surface-sunken">
+              <Ionicons name="person" size={44} color={colors.ink.subtle} />
+            </View>
+            <Text className="text-2xl font-bold text-ink">{fullName}</Text>
+
+            <View className="w-full flex-row">
+              <Stat label="AGE" value={user.age} />
+              <Stat label="WEIGHT" value={`${user.weight} kg`} />
+              <Stat label="HEIGHT" value={`${user.height} cm`} />
+            </View>
+          </View>
+
+          {/* Mengganti program juga mengubah target kalori & makro di bawah */}
+          <View className="gap-4">
+            <Text className="text-lg font-bold text-ink">Active Program</Text>
+            <View className="flex-row gap-3">
+              {programs.map((program) => {
+                const active = user.program === program.value;
+                return (
+                  <Pressable
+                    key={program.value}
+                    onPress={() => updateUser({ program: program.value })}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    className={`flex-1 items-center gap-2 rounded-2xl border py-4 active:opacity-80 ${
+                      active ? 'border-brand bg-brand' : 'border-line bg-surface'
+                    }`}
+                  >
+                    <Ionicons
+                      name={program.icon}
+                      size={20}
+                      color={active ? colors.surface.DEFAULT : colors.brand.DEFAULT}
+                    />
+                    <Text
+                      className={`text-xs font-semibold ${
+                        active ? 'text-white' : 'text-brand-dark'
+                      }`}
+                    >
+                      {program.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View className="gap-4">
+            <Text className="text-lg font-bold text-ink">
+              Daily {programLabel(user.program)} Targets
+            </Text>
+            <Card className="overflow-hidden px-4">
+              {targetRows.map((row, index) => (
+                <View
+                  key={row.label}
+                  className={`flex-row items-center gap-3 py-4 ${
+                    index > 0 ? 'border-t border-line-soft' : ''
+                  }`}
+                >
+                  <View
+                    className="h-3 w-1 rounded-full"
+                    style={{ backgroundColor: row.color }}
+                  />
+                  <Text className="flex-1 text-base text-ink">{row.label}</Text>
+                  <Text className="text-base font-bold text-ink">{row.value}</Text>
+                </View>
+              ))}
+            </Card>
+          </View>
+
+          <View className="gap-4">
+            <Text className="text-lg font-bold text-ink">Settings</Text>
+            <Card className="overflow-hidden px-4">
+              <Pressable
+                accessibilityRole="button"
+                className="flex-row items-center justify-between py-4 active:opacity-70"
+              >
+                <Text className="text-base text-ink">Notification Preferences</Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.ink.subtle} />
+              </Pressable>
+
+              <Pressable
+                onPress={() =>
+                  updateUser({ units: user.units === 'metric' ? 'imperial' : 'metric' })
+                }
+                accessibilityRole="button"
+                className="flex-row items-center justify-between border-t border-line-soft py-4 active:opacity-70"
+              >
+                <Text className="text-base text-ink">Units (kg/lbs)</Text>
+                <Text className="text-base text-ink-muted">
+                  {user.units === 'metric' ? 'Metric (kg)' : 'Imperial (lbs)'}
+                </Text>
+              </Pressable>
+
+              <View className="flex-row items-center justify-between border-t border-line-soft py-4">
+                <Text className="text-base text-ink">Dark Mode</Text>
+                <Switch
+                  value={user.darkMode}
+                  onValueChange={(value) => updateUser({ darkMode: value })}
+                  trackColor={{ false: colors.line.DEFAULT, true: colors.brand.DEFAULT }}
+                  thumbColor={colors.surface.DEFAULT}
+                />
+              </View>
+            </Card>
+          </View>
+        </View>
+      </ScrollView>
+    </Screen>
+  );
+}

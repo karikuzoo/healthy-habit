@@ -1,208 +1,93 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { ScrollView, Switch, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import Colors from '../../src/constants/colors';
+import { Button, Card, ProgressRing, Screen } from '../../src/components';
+import { colors } from '../../src/theme/colors';
+import {
+  bedtimeReminder,
+  formatDurationEn,
+  lastNightDuration,
+  qualityLabelEn,
+  sleepTargetMinutes,
+  weeklyTrend,
+} from '../../src/data/sleep';
+
+const CHART_HEIGHT = 96;
 
 export default function SleepScreen() {
   const [reminderEnabled, setReminderEnabled] = useState(true);
 
+  const durationMinutes = lastNightDuration();
+  const longestNight = Math.max(...weeklyTrend.map((night) => night.minutes));
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.heading}>Sleep Tracker</Text>
+    <Screen>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View className="gap-5 px-5 pb-8 pt-2">
+          <Text className="text-3xl font-bold text-ink">Sleep Tracker</Text>
 
-        <View style={styles.sleepCard}>
-          <View style={styles.circularProgress}>
-            <Text style={styles.asleepLabel}>ASLEEP TIME</Text>
-            <Text style={styles.asleepValue}>7h 30m</Text>
+          {/* Ring SVG — menggantikan trik border+rotate yang render-nya tidak akurat */}
+          <Card className="items-center gap-4 p-6">
+            <ProgressRing
+              size={180}
+              strokeWidth={12}
+              value={durationMinutes / sleepTargetMinutes}
+              color={colors.sleep.DEFAULT}
+              trackColor={colors.line.DEFAULT}
+            >
+              <Text className="text-stat font-bold text-ink">
+                {formatDurationEn(durationMinutes)}
+              </Text>
+              <Text className="mt-1 text-2xs font-bold tracking-widest text-ink-muted">
+                ASLEEP TIME
+              </Text>
+            </ProgressRing>
+
+            <View className="rounded-full bg-brand-soft px-4 py-2">
+              <Text className="text-sm font-bold text-brand-dark">
+                Sleep Quality: {qualityLabelEn()}
+              </Text>
+            </View>
+          </Card>
+
+          <View className="gap-3">
+            <Text className="text-lg font-bold text-ink">Weekly Trend</Text>
+            <Card className="p-5">
+              <View
+                className="flex-row items-end justify-between"
+                style={{ height: CHART_HEIGHT }}
+              >
+                {weeklyTrend.map((night, index) => (
+                  <View key={`${night.day}-${index}`} className="flex-1 items-center gap-2">
+                    <View
+                      className={`w-3 rounded-full ${night.active ? 'bg-sleep' : 'bg-line'}`}
+                      style={{ height: (night.minutes / longestNight) * (CHART_HEIGHT - 24) }}
+                    />
+                    <Text className="text-xs text-ink-muted">{night.day}</Text>
+                  </View>
+                ))}
+              </View>
+            </Card>
           </View>
-        </View>
 
-        <View style={styles.badgeContainer}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>Sleep Quality: Good</Text>
-          </View>
-        </View>
+          <Card className="flex-row items-center justify-between p-5">
+            <View className="flex-1 pr-3">
+              <Text className="text-base font-bold text-ink">Bedtime Reminder</Text>
+              <Text className="mt-0.5 text-sm text-ink-muted">
+                Ingatkan aku bersiap tidur pukul {bedtimeReminder}
+              </Text>
+            </View>
+            <Switch
+              value={reminderEnabled}
+              onValueChange={setReminderEnabled}
+              trackColor={{ false: colors.line.DEFAULT, true: colors.brand.DEFAULT }}
+              thumbColor={colors.surface.DEFAULT}
+            />
+          </Card>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Weekly Trend</Text>
-          <View style={styles.chartContainer}>
-            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => {
-              const heights = [40, 60, 50, 80, 70, 90, 80];
-              return (
-                <View key={index} style={styles.barCol}>
-                  <View style={[styles.bar, { height: heights[index] }]} />
-                  <Text style={styles.dayLabel}>{day}</Text>
-                </View>
-              );
-            })}
-          </View>
+          <Button label="Catat tidur" onPress={() => router.push('/sleep/input')} />
         </View>
-
-        <View style={styles.reminderRow}>
-          <View style={styles.reminderTextContainer}>
-            <Text style={styles.reminderTitle}>Bedtime Reminder</Text>
-            <Text style={styles.reminderDesc}>Remind me to wind down at 10:00 PM</Text>
-          </View>
-          <Switch
-            value={reminderEnabled}
-            onValueChange={setReminderEnabled}
-            trackColor={{ false: '#767577', true: Colors.primary || '#1B4332' }}
-            thumbColor={'#fff'}
-          />
-        </View>
-
-        <TouchableOpacity 
-          style={styles.button}
-          onPress={() => router.push('/sleep/input')}
-        >
-          <Text style={styles.buttonText}>Catat tidur</Text>
-        </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background || '#F7F9F2',
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  heading: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1B4332',
-    marginBottom: 24,
-  },
-  sleepCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 30,
-    alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  circularProgress: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 12,
-    borderColor: '#1B4332',
-    borderTopColor: '#E0E0E0', 
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ rotate: '45deg' }],
-  },
-  asleepLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
-    transform: [{ rotate: '-45deg' }],
-    marginBottom: 4,
-  },
-  asleepValue: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#1B4332',
-    transform: [{ rotate: '-45deg' }],
-  },
-  badgeContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  badge: {
-    backgroundColor: '#E8F5E9',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-  },
-  badgeText: {
-    color: '#1B4332',
-    fontWeight: 'bold',
-  },
-  section: {
-    marginBottom: 30,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1B4332',
-    marginBottom: 16,
-  },
-  chartContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    height: 120,
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  barCol: {
-    alignItems: 'center',
-  },
-  bar: {
-    width: 12,
-    backgroundColor: '#1B4332',
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  dayLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  reminderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  reminderTextContainer: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  reminderTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1B4332',
-    marginBottom: 4,
-  },
-  reminderDesc: {
-    fontSize: 14,
-    color: '#666',
-  },
-  button: {
-    backgroundColor: '#1B4332',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});

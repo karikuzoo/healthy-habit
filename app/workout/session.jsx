@@ -1,143 +1,64 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import Colors from '../../src/constants/colors';
+import React, { useEffect, useState } from 'react';
+import { Text, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Button, Card, Screen, ScreenHeader } from '../../src/components';
+import { formatSets, todayWorkout } from '../../src/data/workout';
+
+/** 95 -> "01:35" */
+function formatClock(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
 
 export default function SessionScreen() {
-  const router = useRouter();
-  const [seconds, setSeconds] = useState(0);
+  const { exercise: exerciseId } = useLocalSearchParams();
+  const [elapsed, setElapsed] = useState(0);
+  const [completedSets, setCompletedSets] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setSeconds(prev => prev + 1);
-    }, 1000);
+    const interval = setInterval(() => setElapsed((prev) => prev + 1), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const formatTime = (totalSeconds) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  const exercise =
+    todayWorkout.exercises.find((item) => item.id === exerciseId) ?? todayWorkout.exercises[0];
+
+  const allSetsDone = completedSets >= exercise.sets;
+
+  // Estimasi kalori dibagi rata per gerakan, lalu diskala oleh waktu berjalan
+  const caloriesPerSecond =
+    todayWorkout.estimatedCalories / (todayWorkout.durationMinutes * 60);
+  const burned = Math.round(elapsed * caloriesPerSecond);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Sesi Latihan</Text>
-      </View>
+    <Screen>
+      <ScreenHeader title="Sesi Latihan" />
 
-      <View style={styles.timerContainer}>
-        <Text style={styles.timerText}>{formatTime(seconds)}</Text>
-        <Text style={styles.caloriesText}>🔥 45 kkal terbakar</Text>
-      </View>
+      <View className="flex-1 justify-between px-5 pb-6">
+        <View className="items-center pt-8">
+          <Text className="text-timer font-bold text-brand-dark">{formatClock(elapsed)}</Text>
+          <Text className="mt-2 text-base text-ink-muted">🔥 {burned} kkal terbakar</Text>
+        </View>
 
-      <View style={styles.exerciseCard}>
-        <Text style={styles.exerciseName}>Goblet Squat</Text>
-        <Text style={styles.exerciseDetails}>Set 1 dari 3 • 12 repetisi</Text>
-      </View>
+        <Card className="items-center gap-2 p-6">
+          <Text className="text-2xl font-bold text-ink">{exercise.name}</Text>
+          <Text className="text-base text-ink-muted">{formatSets(exercise)}</Text>
+          <Text className="mt-2 text-sm font-semibold text-brand">
+            Set {Math.min(completedSets + 1, exercise.sets)} dari {exercise.sets}
+          </Text>
+        </Card>
 
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.setButton}>
-          <Text style={styles.setButtonText}>Set Selesai</Text>
-        </TouchableOpacity>
+        <View className="gap-3">
+          <Button
+            label={allSetsDone ? 'Semua set selesai' : 'Set Selesai'}
+            variant="outline"
+            onPress={() => setCompletedSets((prev) => Math.min(prev + 1, exercise.sets))}
+            className={allSetsDone ? 'opacity-50' : ''}
+          />
+          <Button label="Selesai Latihan" onPress={() => router.back()} />
+        </View>
       </View>
-
-      <TouchableOpacity style={styles.finishButton} onPress={() => router.back()}>
-        <Text style={styles.finishButtonText}>Selesai Latihan</Text>
-      </TouchableOpacity>
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors?.background || '#F5F5F5',
-    padding: 20,
-    justifyContent: 'space-between',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  backButton: {
-    marginRight: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  timerContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  timerText: {
-    fontSize: 64,
-    fontWeight: 'bold',
-    color: '#1B4332',
-    marginBottom: 12,
-  },
-  caloriesText: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
-  },
-  exerciseCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    marginBottom: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  exerciseName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  exerciseDetails: {
-    fontSize: 16,
-    color: '#666',
-  },
-  actionsContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  setButton: {
-    backgroundColor: '#FFF',
-    borderWidth: 2,
-    borderColor: '#1B4332',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  setButtonText: {
-    color: '#1B4332',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  finishButton: {
-    backgroundColor: '#1B4332',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  finishButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});

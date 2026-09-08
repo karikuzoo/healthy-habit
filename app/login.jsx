@@ -1,217 +1,76 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import Colors from '../src/constants/colors';
+import { Button, Field, Screen, Segmented } from '../src/components';
+import { useUser } from '../src/context/UserContext';
+
+const TABS = [
+  { value: 'masuk', label: 'Masuk' },
+  { value: 'daftar', label: 'Daftar' },
+];
 
 export default function LoginScreen() {
-  const [showPassword, setShowPassword] = useState(false);
+  const { login } = useUser();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleLogin = () => {
+    login();
+    router.replace('/(tabs)');
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.brand}>HEALTHY HABIT</Text>
-        <Text style={styles.heading}>Selamat datang</Text>
-        <Text style={styles.subtitle}>
-          Masuk atau buat akun untuk memulai perjalanan sehatmu.
-        </Text>
+    <Screen className="bg-surface">
+      <ScrollView keyboardShouldPersistTaps="handled">
+        <View className="px-6 pb-10 pt-10">
+          <Text className="mb-2 text-xs font-bold tracking-widest text-brand-dark">
+            HEALTHY HABIT
+          </Text>
+          <Text className="mb-2 text-3xl font-bold text-ink">Selamat datang</Text>
+          <Text className="mb-8 text-base leading-6 text-ink-muted">
+            Masuk atau buat akun untuk memulai perjalanan sehatmu.
+          </Text>
 
-        <View style={styles.tabContainer}>
-          <TouchableOpacity style={[styles.tab, styles.activeTab]}>
-            <Text style={[styles.tabText, styles.activeTabText]}>Masuk</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.tab}
-            onPress={() => router.push('/register')}
-          >
-            <Text style={styles.tabText}>Daftar</Text>
-          </TouchableOpacity>
-        </View>
+          <Segmented
+            options={TABS}
+            value="masuk"
+            onChange={(value) => value === 'daftar' && router.push('/register')}
+            className="mb-8"
+          />
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.inputIcon} />
-              <TextInput 
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
+          <View className="gap-4">
+            <Field
+              label="Email"
+              icon="mail-outline"
+              placeholder="nama@email.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+
+            <Field
+              label="Kata sandi"
+              icon="lock-closed-outline"
+              placeholder="Masukkan kata sandi"
+              value={password}
+              onChangeText={setPassword}
+              secure
+            />
+
+            <Pressable className="self-end" hitSlop={8} accessibilityRole="button">
+              <Text className="text-sm font-semibold text-brand-dark">Lupa kata sandi?</Text>
+            </Pressable>
+
+            <Button label="Masuk" onPress={handleLogin} className="mt-2" />
+
+            <Text className="mt-2 text-center text-sm text-ink-muted">
+              atau lanjutkan dengan Google
+            </Text>
           </View>
-
-          <View style={styles.inputGroup}>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="lock-closed-outline" size={20} color="#6B7280" style={styles.inputIcon} />
-              <TextInput 
-                style={styles.input}
-                placeholder="Kata sandi"
-                placeholderTextColor="#9CA3AF"
-                secureTextEntry={!showPassword}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Lupa kata sandi?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.loginButton}
-            onPress={() => router.replace('/(tabs)')}
-          >
-            <Text style={styles.loginButtonText}>Masuk</Text>
-          </TouchableOpacity>
-
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>atau lanjutkan dengan</Text>
-            <View style={styles.divider} />
-          </View>
-
-          <TouchableOpacity style={styles.googleButton}>
-            <Ionicons name="logo-google" size={20} color="#111827" style={styles.googleIcon} />
-            <Text style={styles.googleButtonText}>Google</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollContent: {
-    padding: 24,
-  },
-  brand: {
-    color: '#1B4332',
-    fontSize: 12,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    marginTop: 40,
-    marginBottom: 8,
-  },
-  heading: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 24,
-    padding: 4,
-    marginBottom: 32,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 20,
-  },
-  activeTab: {
-    backgroundColor: '#1B4332',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#6B7280',
-  },
-  activeTabText: {
-    color: '#FFFFFF',
-  },
-  form: {
-    gap: 16,
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 52,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#111827',
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginTop: -8,
-    marginBottom: 8,
-  },
-  forgotPasswordText: {
-    color: '#1B4332',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  loginButton: {
-    backgroundColor: '#1B4332',
-    height: 52,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#6B7280',
-    fontSize: 14,
-  },
-  googleButton: {
-    flexDirection: 'row',
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  googleIcon: {
-    marginRight: 8,
-  },
-  googleButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-});

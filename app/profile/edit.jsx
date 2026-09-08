@@ -1,186 +1,103 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import Colors from '../../src/constants/colors';
+import { Button, Field, Screen, ScreenHeader } from '../../src/components';
+import { colors } from '../../src/theme/colors';
+import { useUser } from '../../src/context/UserContext';
 
 export default function EditProfileScreen() {
-  const [name, setName] = useState('Padlan Prabowo');
-  const [email, setEmail] = useState('padlan@example.com');
-  const [height, setHeight] = useState('182');
-  const [weight, setWeight] = useState('78');
-  const [target, setTarget] = useState('');
+  const { user, updateUser, fullName } = useUser();
+
+  const [form, setForm] = useState({
+    name: fullName,
+    email: user.email,
+    height: String(user.height),
+    weight: String(user.weight),
+    targetGoal: user.targetGoal,
+  });
+
+  const setField = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const handleSave = () => {
+    const [firstName, ...rest] = form.name.trim().split(' ');
+
+    updateUser({
+      firstName: firstName ?? user.firstName,
+      lastName: rest.join(' '),
+      email: form.email,
+      height: Number(form.height) || user.height,
+      weight: Number(form.weight) || user.weight,
+      targetGoal: form.targetGoal,
+    });
+
+    router.back();
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1B4332" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit profil</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <Screen>
+      <ScreenHeader title="Edit profil" />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.subtitle}>Perbarui informasi personal dan target kesehatanmu.</Text>
+      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View className="gap-5 px-5 pb-8">
+          <Text className="text-sm text-ink-muted">
+            Perbarui informasi personal dan target kesehatanmu.
+          </Text>
 
-        <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={50} color="#ccc" />
-          </View>
-          <TouchableOpacity>
-            <Text style={styles.changePhotoText}>Ubah foto</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.formSection}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nama lengkap</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
-              <Text style={styles.label}>Tinggi (cm)</Text>
-              <TextInput
-                style={styles.input}
-                value={height}
-                onChangeText={setHeight}
-                keyboardType="numeric"
-              />
+          <View className="items-center gap-3">
+            <View className="h-24 w-24 items-center justify-center rounded-full bg-surface-sunken">
+              <Ionicons name="person" size={44} color={colors.ink.subtle} />
             </View>
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
-              <Text style={styles.label}>Berat (kg)</Text>
-              <TextInput
-                style={styles.input}
-                value={weight}
-                onChangeText={setWeight}
-                keyboardType="numeric"
-              />
-            </View>
+            <Pressable accessibilityRole="button" hitSlop={8}>
+              <Text className="text-sm font-bold text-brand">Ubah foto</Text>
+            </Pressable>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Target utama</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Lebih bugar dan tidur teratur"
-              value={target}
-              onChangeText={setTarget}
+          <Field
+            label="Nama lengkap"
+            value={form.name}
+            onChangeText={setField('name')}
+            placeholder="Nama lengkap"
+          />
+
+          <Field
+            label="Email"
+            value={form.email}
+            onChangeText={setField('email')}
+            placeholder="nama@email.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+
+          <View className="flex-row gap-4">
+            <Field
+              label="Tinggi"
+              value={form.height}
+              onChangeText={setField('height')}
+              placeholder="165 cm"
+              keyboardType="numeric"
+              className="flex-1"
+            />
+            <Field
+              label="Berat"
+              value={form.weight}
+              onChangeText={setField('weight')}
+              placeholder="58 kg"
+              keyboardType="numeric"
+              className="flex-1"
             />
           </View>
-        </View>
 
-        <TouchableOpacity 
-          style={styles.button}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.buttonText}>Simpan perubahan</Text>
-        </TouchableOpacity>
+          <Field
+            label="Target utama"
+            value={form.targetGoal}
+            onChangeText={setField('targetGoal')}
+            placeholder="Lebih bugar dan tidur teratur"
+          />
+
+          <Button label="Simpan perubahan" onPress={handleSave} className="mt-2" />
+        </View>
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background || '#F7F9F2',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1B4332',
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  subtitle: {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 14,
-    marginBottom: 30,
-  },
-  avatarSection: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  changePhotoText: {
-    color: '#E07A5F',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  formSection: {
-    marginBottom: 30,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#333',
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  button: {
-    backgroundColor: '#8B0000', // Dark red/maroon
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});

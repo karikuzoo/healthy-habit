@@ -1,113 +1,62 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { targetsFor } from '../data/nutrition';
 
-const UserContext = createContext();
+const UserContext = createContext(null);
 
 const defaultUser = {
   firstName: 'Padlan',
   lastName: 'Prabowo',
   email: 'padlan@email.com',
   gender: 'Laki-Laki',
-  birthDate: '1998-08-12',
+  birthDate: '12 Agustus 1998',
   age: 28,
   height: 182,
   weight: 78,
-  activityLevel: 'moderate', // sedentary, light, moderate, active, veryActive
-  program: 'bulking', // bulking, maintenance, cutting
+  activityLevel: 'sedentary',
+  program: 'bulking',
   targetGoal: 'Lebih bugar dan tidur teratur',
   avatar: null,
   darkMode: false,
-  units: 'metric', // metric, imperial
+  units: 'metric',
 };
 
 export function UserProvider({ children }) {
   const [user, setUser] = useState(defaultUser);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const updateUser = (updates) => {
+  const updateUser = useCallback((updates) => {
     setUser((prev) => ({ ...prev, ...updates }));
-  };
+  }, []);
 
-  const login = () => setIsLoggedIn(true);
-  const logout = () => setIsLoggedIn(false);
+  const login = useCallback(() => setIsLoggedIn(true), []);
+  const logout = useCallback(() => setIsLoggedIn(false), []);
 
-  // Calculate BMR using Mifflin-St Jeor
-  const getBMR = () => {
-    const base = 10 * user.weight + 6.25 * user.height - 5 * user.age;
-    return user.gender === 'Laki-Laki' ? base + 5 : base - 161;
-  };
+  const value = useMemo(() => {
+    const targets = targetsFor(user.program);
 
-  // Activity multipliers
-  const activityMultipliers = {
-    sedentary: 1.2,
-    light: 1.375,
-    moderate: 1.55,
-    active: 1.725,
-    veryActive: 1.9,
-  };
+    return {
+      user,
+      updateUser,
+      isLoggedIn,
+      login,
+      logout,
+      fullName: `${user.firstName} ${user.lastName}`.trim(),
+      targetCalories: targets.calories,
+      macroTargets: {
+        protein: targets.protein,
+        carbs: targets.carbs,
+        fat: targets.fat,
+      },
+    };
+  }, [user, updateUser, isLoggedIn, login, logout]);
 
-  const getTDEE = () => {
-    return Math.round(getBMR() * (activityMultipliers[user.activityLevel] || 1.55));
-  };
-
-  const getTargetCalories = () => {
-    const tdee = getTDEE();
-    switch (user.program) {
-      case 'bulking':
-        return tdee + 400;
-      case 'cutting':
-        return tdee - 400;
-      default:
-        return tdee;
-    }
-  };
-
-  const getMacroTargets = () => {
-    const calories = getTargetCalories();
-    switch (user.program) {
-      case 'bulking':
-        return {
-          protein: Math.round((calories * 0.25) / 4),
-          carbs: Math.round((calories * 0.50) / 4),
-          fat: Math.round((calories * 0.25) / 9),
-        };
-      case 'cutting':
-        return {
-          protein: Math.round((calories * 0.40) / 4),
-          carbs: Math.round((calories * 0.35) / 4),
-          fat: Math.round((calories * 0.25) / 9),
-        };
-      default:
-        return {
-          protein: Math.round((calories * 0.30) / 4),
-          carbs: Math.round((calories * 0.40) / 4),
-          fat: Math.round((calories * 0.30) / 9),
-        };
-    }
-  };
-
-  return (
-    <UserContext.Provider
-      value={{
-        user,
-        updateUser,
-        isLoggedIn,
-        login,
-        logout,
-        getBMR,
-        getTDEE,
-        getTargetCalories,
-        getMacroTargets,
-      }}
-    >
-      {children}
-    </UserContext.Provider>
-  );
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
 
 export function useUser() {
   const context = useContext(UserContext);
   if (!context) {
-    throw new Error('useUser must be used within a UserProvider');
+    throw new Error('useUser harus dipakai di dalam <UserProvider>');
   }
   return context;
 }

@@ -1,3 +1,5 @@
+const { colors } = require("./src/theme/colors");
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -6,7 +8,18 @@ module.exports = {
   ],
   presets: [require("nativewind/preset")],
   theme: {
-    extend: {},
+    extend: {
+      colors,
+      fontSize: {
+        "2xs": ["10px", "14px"],
+        stat: ["32px", "38px"],
+        score: ["40px", "46px"],
+        timer: ["64px", "70px"],
+      },
+      borderRadius: {
+        card: "20px",
+      },
+    },
   },
   plugins: [],
-}
+};

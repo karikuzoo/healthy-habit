@@ -1,294 +1,131 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Colors from '../../src/constants/colors';
-import Typography from '../../src/constants/typography';
+import { Card, ProgressBar, ProgressRing, Screen, StatTile } from '../../src/components';
+import { colors } from '../../src/theme/colors';
 import { useUser } from '../../src/context/UserContext';
+import { lastNightDuration, formatDuration } from '../../src/data/sleep';
+import { todayWorkout } from '../../src/data/workout';
+import { meals, sumMeals } from '../../src/data/nutrition';
+import { formatNumber } from '../../src/lib/format';
+
+const DAILY_SCORE = 82;
+const STEPS = { current: 6248, target: 8000 };
 
 export default function HomeDashboard() {
-  // const { user } = useUser();
+  const { user } = useUser();
+
+  const stepsProgress = STEPS.current / STEPS.target;
+  const stepsLeft = Math.max(STEPS.target - STEPS.current, 0);
+  const consumed = sumMeals(meals);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Selamat pagi,</Text>
-            <Text style={styles.name}>Padlan 👋</Text>
-          </View>
-          <View style={styles.avatar} />
-        </View>
-
-        {/* Daily Score Card */}
-        <View style={styles.scoreCard}>
-          <View style={styles.scoreInfo}>
-            <Text style={styles.scoreLabel}>SKOR HARI INI</Text>
-            <Text style={styles.scoreValue}>82<Text style={styles.scoreMax}>/100</Text></Text>
-            <Text style={styles.scoreSubtitle}>Kamu dalam ritme yang baik</Text>
-          </View>
-          <View style={styles.scoreRing}>
-            <View style={styles.innerRing} />
-          </View>
-        </View>
-
-        {/* Steps Card */}
-        <View style={styles.stepsCard}>
-          <View style={styles.stepsHeader}>
-            <View style={styles.stepsHeaderLeft}>
-              <Ionicons name="footsteps" size={20} color={Colors.primary || '#1B4332'} />
-              <View style={styles.stepsHeaderText}>
-                <Text style={styles.stepsLabel}>Langkah kaki</Text>
-                <Text style={styles.stepsTarget}>Target harian 8.000</Text>
-              </View>
+    <Screen>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View className="gap-5 px-5 pb-8 pt-2">
+          {/* Sapaan */}
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text className="text-base text-ink-muted">Selamat pagi,</Text>
+              <Text className="text-2xl font-bold text-ink">{user.firstName} 👋</Text>
             </View>
-            <Text style={styles.stepsPercentage}>78%</Text>
+            <View className="h-12 w-12 items-center justify-center rounded-full bg-surface-sunken">
+              <Ionicons name="person" size={24} color={colors.ink.subtle} />
+            </View>
           </View>
-          <Text style={styles.stepsValue}>6.248 <Text style={styles.stepsValueLabel}>langkah</Text></Text>
-          <View style={styles.progressBarContainer}>
-            <View style={styles.progressBarFill} />
-          </View>
-          <Text style={styles.stepsSubtitle}>1.752 langkah lagi—jalan sore 18 menit cukup!</Text>
-        </View>
 
-        {/* Health Summary Row */}
-        <Text style={styles.sectionTitle}>Ringkasan kesehatan</Text>
-        <View style={styles.healthSummaryRow}>
-          <View style={styles.healthCard}>
-            <Ionicons name="bed" size={24} color="#4A90E2" />
-            <Text style={styles.healthCardValue}>7j 35m</Text>
-            <Text style={styles.healthCardLabel}>Tidur</Text>
+          {/* Skor harian */}
+          <View className="flex-row items-center justify-between rounded-card bg-brand-dark p-5">
+            <View className="flex-1">
+              <Text className="text-2xs font-bold tracking-widest text-white/70">
+                SKOR HARI INI
+              </Text>
+              <Text className="mt-2 text-score font-bold text-white">
+                {DAILY_SCORE}
+                <Text className="text-xl font-normal text-white/70">/100</Text>
+              </Text>
+              <Text className="mt-1 text-sm text-white/80">Kamu dalam ritme yang baik</Text>
+            </View>
+            <ProgressRing
+              size={76}
+              strokeWidth={7}
+              value={DAILY_SCORE / 100}
+              color={colors.brand.light}
+              trackColor="rgba(255,255,255,0.18)"
+            />
           </View>
-          <View style={styles.healthCard}>
-            <Ionicons name="flame" size={24} color="#F5A623" />
-            <Text style={styles.healthCardValue}>1.480</Text>
-            <Text style={styles.healthCardLabel}>Kalori</Text>
-          </View>
-          <View style={styles.healthCard}>
-            <Ionicons name="timer" size={24} color="#50E3C2" />
-            <Text style={styles.healthCardValue}>32 min</Text>
-            <Text style={styles.healthCardLabel}>Latihan</Text>
-          </View>
-        </View>
 
-        {/* FitSync Plan Card */}
-        <View style={styles.fitSyncCard}>
-          <Text style={styles.fitSyncTitle}>✨ Today's FitSync Plan</Text>
-          <Text style={styles.fitSyncBody}>
-            Light Cardio recommended (6.5h sleep detected). Focus on a active recovery jog and steady breathing to optimize longevity.
-          </Text>
+          {/* Langkah kaki */}
+          <Card className="p-5">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-3">
+                <View className="h-9 w-9 items-center justify-center rounded-xl bg-steps-soft">
+                  <Ionicons name="footsteps" size={18} color={colors.steps.DEFAULT} />
+                </View>
+                <View>
+                  <Text className="text-base font-semibold text-ink">Langkah kaki</Text>
+                  <Text className="text-xs text-ink-muted">
+                    Target harian {formatNumber(STEPS.target)}
+                  </Text>
+                </View>
+              </View>
+              <Text className="text-base font-bold text-brand">
+                {Math.round(stepsProgress * 100)}%
+              </Text>
+            </View>
+
+            <Text className="mb-3 mt-4 text-stat font-bold text-ink">
+              {formatNumber(STEPS.current)}{' '}
+              <Text className="text-base font-normal text-ink-muted">langkah</Text>
+            </Text>
+
+            <ProgressBar value={stepsProgress} barClassName="bg-steps" />
+
+            <Text className="mt-3 text-xs text-ink-muted">
+              {formatNumber(stepsLeft)} langkah lagi—jalan sore 18 menit cukup!
+            </Text>
+          </Card>
+
+          {/* Ringkasan kesehatan */}
+          <View className="gap-4">
+            <Text className="text-lg font-bold text-ink">Ringkasan kesehatan</Text>
+            <View className="flex-row gap-3">
+              <StatTile
+                icon="moon"
+                iconColor={colors.sleep.DEFAULT}
+                iconBgClassName="bg-sleep-soft"
+                value={formatDuration(lastNightDuration())}
+                label="Tidur"
+              />
+              <StatTile
+                icon="flame"
+                iconColor={colors.macro.calories}
+                iconBgClassName="bg-steps-soft"
+                value={formatNumber(consumed.calories)}
+                label="Kalori"
+              />
+              <StatTile
+                icon="timer"
+                iconColor={colors.brand.light}
+                iconBgClassName="bg-brand-soft"
+                value={`${todayWorkout.durationMinutes} min`}
+                label="Latihan"
+              />
+            </View>
+          </View>
+
+          {/* Rekomendasi */}
+          <View className="rounded-2xl bg-brand-soft p-5">
+            <Text className="mb-2 text-base font-bold text-brand-dark">
+              ✨ Today's FitSync Plan
+            </Text>
+            <Text className="text-sm leading-6 text-brand-darker">
+              Light Cardio recommended (6.5h sleep detected). Focus on an active recovery jog
+              and steady breathing to optimize longevity.
+            </Text>
+          </View>
         </View>
-        
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F6F8F7',
-  },
-  container: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  greeting: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 4,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#D1D5DB',
-  },
-  scoreCard: {
-    backgroundColor: '#2D6A4F',
-    borderRadius: 20,
-    padding: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  scoreInfo: {
-    flex: 1,
-  },
-  scoreLabel: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  scoreValue: {
-    color: '#FFF',
-    fontSize: 40,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  scoreMax: {
-    fontSize: 20,
-    fontWeight: 'normal',
-  },
-  scoreSubtitle: {
-    color: '#E5E7EB',
-    fontSize: 14,
-  },
-  scoreRing: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 6,
-    borderColor: '#40916C',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderTopColor: '#FFF',
-    borderRightColor: '#FFF',
-    borderBottomColor: '#FFF',
-    transform: [{ rotate: '-45deg' }],
-  },
-  innerRing: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'transparent',
-  },
-  stepsCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  stepsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  stepsHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  stepsHeaderText: {
-    marginLeft: 12,
-  },
-  stepsLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
-  stepsTarget: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  stepsPercentage: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2D6A4F',
-  },
-  stepsValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 12,
-  },
-  stepsValueLabel: {
-    fontSize: 16,
-    fontWeight: 'normal',
-    color: '#666',
-  },
-  progressBarContainer: {
-    height: 8,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
-    marginBottom: 12,
-  },
-  progressBarFill: {
-    width: '78%',
-    height: '100%',
-    backgroundColor: '#2D6A4F',
-    borderRadius: 4,
-  },
-  stepsSubtitle: {
-    fontSize: 13,
-    color: '#666',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 16,
-  },
-  healthSummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  healthCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
-    width: '31%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  healthCardValue: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#000',
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  healthCardLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  fitSyncCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  fitSyncTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 12,
-  },
-  fitSyncBody: {
-    fontSize: 14,
-    color: '#444',
-    lineHeight: 22,
-  },
-});

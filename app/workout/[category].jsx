@@ -1,102 +1,56 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import Colors from '../../src/constants/colors';
-
-const categoryExercises = [
-  { id: 1, name: 'Barbell Squat', sets: '3 set × 10 repetisi' },
-  { id: 2, name: 'Lunges', sets: '3 set × 12 repetisi' },
-  { id: 3, name: 'Leg Press', sets: '3 set × 10 repetisi' },
-];
+import { router, useLocalSearchParams } from 'expo-router';
+import { Card, Screen, ScreenHeader } from '../../src/components';
+import { colors } from '../../src/theme/colors';
+import { exerciseCategories, exercisesByCategory, formatSets } from '../../src/data/workout';
 
 export default function CategoryScreen() {
-  const router = useRouter();
   const { category } = useLocalSearchParams();
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.title}>{category || 'Kategori'}</Text>
-      </View>
+  const title =
+    exerciseCategories.find((item) => item.id === category)?.name ?? 'Kategori';
+  const exercises = exercisesByCategory[category] ?? [];
 
-      <ScrollView style={styles.exerciseList} showsVerticalScrollIndicator={false}>
-        {categoryExercises.map((exercise, index) => (
-          <TouchableOpacity 
-            key={exercise.id} 
-            style={styles.exerciseCard}
-            onPress={() => console.log('Tapped', exercise.name)}
-          >
-            <View style={styles.imagePlaceholder} />
-            <View style={styles.exerciseInfo}>
-              <Text style={styles.exerciseName}>{exercise.name}</Text>
-              <Text style={styles.exerciseSets}>{exercise.sets}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#666" />
-          </TouchableOpacity>
-        ))}
+  return (
+    <Screen>
+      <ScreenHeader title={title} />
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View className="gap-3 px-5 pb-8 pt-2">
+          {exercises.length === 0 ? (
+            <Card className="items-center gap-2 p-8">
+              <Ionicons name="barbell-outline" size={28} color={colors.ink.subtle} />
+              <Text className="text-sm text-ink-muted">
+                Belum ada gerakan untuk kategori ini.
+              </Text>
+            </Card>
+          ) : (
+            exercises.map((exercise) => (
+              <Pressable
+                key={exercise.id}
+                onPress={() => router.push(`/workout/session?exercise=${exercise.id}`)}
+                accessibilityRole="button"
+                className="active:opacity-80"
+              >
+                <Card className="flex-row items-center gap-4 p-3">
+                  <View className="h-16 w-16 items-center justify-center rounded-xl bg-surface-sunken">
+                    <Ionicons name="barbell-outline" size={24} color={colors.ink.subtle} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-bold text-ink">{exercise.name}</Text>
+                    <Text className="mt-0.5 text-sm text-ink-muted">
+                      {formatSets(exercise)}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.ink.subtle} />
+                </Card>
+              </Pressable>
+            ))
+          )}
+        </View>
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors?.background || '#F5F5F5',
-    padding: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  backButton: {
-    marginRight: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  exerciseList: {
-    flex: 1,
-  },
-  exerciseCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  imagePlaceholder: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 12,
-    marginRight: 16,
-  },
-  exerciseInfo: {
-    flex: 1,
-  },
-  exerciseName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  exerciseSets: {
-    fontSize: 14,
-    color: '#666',
-  },
-});
