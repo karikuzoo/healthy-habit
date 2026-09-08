@@ -2,6 +2,7 @@ export { Button } from './Button';
 export { Card } from './Card';
 export { Chip } from './Chip';
 export { Field } from './Field';
+export { Loading } from './Loading';
 export { MacroTiles } from './MacroTiles';
 export { ProgressBar } from './ProgressBar';
 export { ProgressRing } from './ProgressRing';

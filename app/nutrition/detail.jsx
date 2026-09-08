@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import {
   Button,
   Card,
@@ -11,16 +12,47 @@ import {
   ScreenHeader,
 } from '../../src/components';
 import { colors } from '../../src/theme/colors';
-import { foodDetail, meals, sumMeals } from '../../src/data/nutrition';
+import { foodDetail, slotLabel } from '../../src/data/nutrition';
+import { addFoodLog, dailyTotals } from '../../src/db/foodLogs';
 import { formatNumber } from '../../src/lib/format';
 import { useUser } from '../../src/context/UserContext';
 
-export default function FoodDetailScreen() {
-  const { targetCalories, macroTargets } = useUser();
+const SLOT = 'siang';
+const EMPTY_TOTALS = { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
-  const consumed = sumMeals(meals);
+export default function FoodDetailScreen() {
+  const db = useSQLiteContext();
+  const { user, targetCalories, macroTargets } = useUser();
+
+  const [consumed, setConsumed] = useState(EMPTY_TOTALS);
+  const [saving, setSaving] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      dailyTotals(db, user.id).then(setConsumed);
+    }, [db, user.id]),
+  );
+
   const dailyProgress = consumed.calories / targetCalories;
   const remaining = Math.max(targetCalories - consumed.calories, 0);
+
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+
+    await addFoodLog(db, user.id, {
+      slot: SLOT,
+      name: foodDetail.name,
+      portion: foodDetail.portion,
+      weightG: foodDetail.weightG,
+      calories: foodDetail.calories,
+      protein: foodDetail.protein,
+      carbs: foodDetail.carbs,
+      fat: foodDetail.fat,
+    });
+
+    router.back();
+  };
 
   return (
     <Screen>
@@ -28,7 +60,6 @@ export default function FoodDetailScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="gap-4 px-5 pb-8">
-          {/* Ringkasan makanan */}
           <Card className="flex-row items-center gap-4 p-4">
             <View className="h-16 w-16 items-center justify-center rounded-xl bg-surface-sunken">
               <Ionicons name="restaurant-outline" size={26} color={colors.ink.subtle} />
@@ -44,7 +75,7 @@ export default function FoodDetailScreen() {
             </View>
           </Card>
 
-          {/* Dampak terhadap kebutuhan harian */}
+          {/* Progres harian dibaca dari log di database */}
           <Card className="flex-row items-center gap-4 p-5">
             <ProgressRing
               size={64}
@@ -66,7 +97,6 @@ export default function FoodDetailScreen() {
             </View>
           </Card>
 
-          {/* Makronutrien: persentase dihitung terhadap target harian */}
           <MacroTiles values={foodDetail} targets={macroTargets} />
 
           <Card className="px-5 py-2">
@@ -85,12 +115,14 @@ export default function FoodDetailScreen() {
           <Card className="flex-row items-center gap-3 p-4">
             <Ionicons name="time-outline" size={18} color={colors.ink.muted} />
             <Text className="flex-1 text-sm text-ink-muted">Waktu Makan</Text>
-            <Text className="text-sm font-semibold text-ink">
-              {foodDetail.mealSlot} • {foodDetail.time}
-            </Text>
+            <Text className="text-sm font-semibold text-ink">{slotLabel(SLOT)}</Text>
           </Card>
 
-          <Button label="Simpan ke Log" onPress={() => router.back()} className="mt-1" />
+          <Button
+            label={saving ? 'Menyimpan...' : 'Simpan ke Log'}
+            onPress={handleSave}
+            className={saving ? 'opacity-50 mt-1' : 'mt-1'}
+          />
         </View>
       </ScrollView>
     </Screen>

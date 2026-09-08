@@ -1,23 +1,34 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import { Card, ProgressBar, ProgressRing, Screen, StatTile } from '../../src/components';
 import { colors } from '../../src/theme/colors';
 import { useUser } from '../../src/context/UserContext';
 import { lastNightDuration, formatDuration } from '../../src/data/sleep';
 import { todayWorkout } from '../../src/data/workout';
-import { meals, sumMeals } from '../../src/data/nutrition';
+import { dailyTotals } from '../../src/db/foodLogs';
 import { formatNumber } from '../../src/lib/format';
 
 const DAILY_SCORE = 82;
 const STEPS = { current: 6248, target: 8000 };
+const EMPTY_TOTALS = { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
 export default function HomeDashboard() {
+  const db = useSQLiteContext();
   const { user } = useUser();
+  const [consumed, setConsumed] = useState(EMPTY_TOTALS);
+
+  // Kalori hari ini dibaca dari log makanan, bukan data statis
+  useFocusEffect(
+    useCallback(() => {
+      dailyTotals(db, user.id).then(setConsumed);
+    }, [db, user.id]),
+  );
 
   const stepsProgress = STEPS.current / STEPS.target;
   const stepsLeft = Math.max(STEPS.target - STEPS.current, 0);
-  const consumed = sumMeals(meals);
 
   return (
     <Screen>

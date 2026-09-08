@@ -1,73 +1,43 @@
 /**
- * Data nutrisi contoh.
+ * Data referensi nutrisi.
  *
- * Total per waktu makan dan total harian sengaja TIDAK disimpan sebagai angka
- * tetap — semuanya diturunkan dari daftar item lewat `sumItems()` supaya
- * ringkasan tidak pernah lagi berbeda dari isinya.
+ * Catatan makanan sendiri hidup di tabel `food_logs` (lihat `src/db/foodLogs.js`);
+ * berkas ini hanya menyimpan hal yang tidak berubah per pengguna.
  */
 
-export const meals = [
-  {
-    id: 'sarapan',
-    name: 'Sarapan',
-    time: '07:15',
-    items: [
-      { id: 'oatmeal', name: 'Oatmeal & Pisang', calories: 320, protein: 12, carbs: 44, fat: 8 },
-      { id: 'telur', name: 'Telur Rebus (2 butir)', calories: 130, protein: 11, carbs: 14, fat: 19 },
-    ],
-  },
-  {
-    id: 'siang',
-    name: 'Makan Siang',
-    time: '12:30',
-    items: [
-      { id: 'ayam-geprek', name: 'Ayam Geprek', calories: 520, protein: 42, carbs: 45, fat: 8 },
-      { id: 'kentang-goreng', name: 'Kentang Goreng', calories: 130, protein: 2, carbs: 12, fat: 9 },
-    ],
-  },
-  {
-    id: 'malam',
-    name: 'Makan Malam',
-    time: '19:00',
-    items: [
-      { id: 'pecel-ayam', name: 'Pecel Ayam', calories: 620, protein: 42, carbs: 45, fat: 8 },
-      { id: 'kentang-rebus', name: 'Kentang Rebus', calories: 130, protein: 2, carbs: 12, fat: 9 },
-    ],
-  },
+/**
+ * Waktu makan.
+ *
+ * `value` yang disimpan ke kolom `meal_slot`, `chip` untuk filter pendek di
+ * layar tambah makanan, dan `label` untuk judul bagian.
+ */
+export const mealSlots = [
+  { value: 'sarapan', chip: 'Sarapan', label: 'Sarapan' },
+  { value: 'siang', chip: 'Siang', label: 'Makan Siang' },
+  { value: 'malam', chip: 'Malam', label: 'Makan Malam' },
+  { value: 'cemilan', chip: 'Cemilan', label: 'Cemilan' },
 ];
 
-/** Menjumlahkan kalori dan makro dari sekumpulan item makanan. */
-export function sumItems(items) {
-  return items.reduce(
-    (total, item) => ({
-      calories: total.calories + item.calories,
-      protein: total.protein + item.protein,
-      carbs: total.carbs + item.carbs,
-      fat: total.fat + item.fat,
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 },
-  );
+export function slotLabel(value) {
+  return mealSlots.find((slot) => slot.value === value)?.label ?? value;
 }
 
-/** Total seluruh waktu makan hari ini. */
-export function sumMeals(mealList = meals) {
-  return sumItems(mealList.flatMap((meal) => meal.items));
-}
-
-export const mealSlots = ['Sarapan', 'Siang', 'Malam', 'Cemilan'];
-
-/** Makanan yang sedang dilihat di layar tambah/detail makanan. */
+/**
+ * Makanan yang sedang dilihat di layar tambah/detail makanan.
+ *
+ * Penampung sementara sampai pencarian makanan (NUT-6) tersedia — sumber
+ * basis data makanan masih perlu diputuskan.
+ */
 export const foodDetail = {
   id: 'ayam-panggang-nasi-merah',
   name: 'Ayam Panggang & Nasi Merah',
   portion: '1 mangkuk',
   weight: '420 g',
+  weightG: 420,
   calories: 520,
   protein: 38,
   carbs: 62,
   fat: 14,
-  mealSlot: 'Makan Siang',
-  time: '12:30',
   micros: [
     { label: 'Serat', value: '4.2 g' },
     { label: 'Gula', value: '8 g' },

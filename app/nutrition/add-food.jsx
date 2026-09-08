@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import {
   Button,
   Card,
@@ -12,20 +13,39 @@ import {
   ScreenHeader,
 } from '../../src/components';
 import { colors } from '../../src/theme/colors';
-import { foodDetail, meals, mealSlots, sumMeals } from '../../src/data/nutrition';
+import { foodDetail, mealSlots } from '../../src/data/nutrition';
+import { addFoodLog } from '../../src/db/foodLogs';
 import { useUser } from '../../src/context/UserContext';
 
 export default function AddFoodScreen() {
-  const { macroTargets } = useUser();
-  const [slot, setSlot] = useState('Siang');
+  const db = useSQLiteContext();
+  const { user, macroTargets } = useUser();
+
+  const [slot, setSlot] = useState('siang');
   const [query, setQuery] = useState('');
   const [portion, setPortion] = useState(foodDetail.portion);
-  const [added, setAdded] = useState(true);
+  const [selected, setSelected] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // Persentase protein harian setelah makanan ini ditambahkan ke log
-  const proteinAfter = Math.round(
-    ((sumMeals(meals).protein + foodDetail.protein) / macroTargets.protein) * 100,
-  );
+  const proteinShare = Math.round((foodDetail.protein / macroTargets.protein) * 100);
+
+  const handleAdd = async () => {
+    if (!selected || saving) return;
+    setSaving(true);
+
+    await addFoodLog(db, user.id, {
+      slot,
+      name: foodDetail.name,
+      portion,
+      weightG: foodDetail.weightG,
+      calories: foodDetail.calories,
+      protein: foodDetail.protein,
+      carbs: foodDetail.carbs,
+      fat: foodDetail.fat,
+    });
+
+    router.back();
+  };
 
   return (
     <Screen>
@@ -49,17 +69,17 @@ export default function AddFoodScreen() {
             <View className="flex-row gap-3">
               {mealSlots.map((item) => (
                 <Chip
-                  key={item}
-                  label={item}
+                  key={item.value}
+                  label={item.chip}
                   tone="solid"
-                  active={slot === item}
-                  onPress={() => setSlot(item)}
+                  active={slot === item.value}
+                  onPress={() => setSlot(item.value)}
                 />
               ))}
             </View>
           </ScrollView>
 
-          {added ? (
+          {selected ? (
             <Card className="gap-4 p-4">
               <View className="flex-row items-start gap-3">
                 <View className="h-14 w-14 items-center justify-center rounded-xl bg-surface-sunken">
@@ -81,9 +101,9 @@ export default function AddFoodScreen() {
                 </Pressable>
 
                 <Pressable
-                  onPress={() => setAdded(false)}
+                  onPress={() => setSelected(false)}
                   accessibilityRole="button"
-                  accessibilityLabel="Hapus makanan ini"
+                  accessibilityLabel="Batalkan pilihan makanan"
                   hitSlop={8}
                 >
                   <Ionicons name="close-circle" size={22} color={colors.ink.subtle} />
@@ -101,23 +121,31 @@ export default function AddFoodScreen() {
 
               <View className="rounded-2xl bg-brand-soft p-4">
                 <Text className="text-sm leading-5 text-brand-darker">
-                  ✨ Setelah makanan ini, kebutuhan protein harianmu tercapai {proteinAfter}%.
+                  ✨ Makanan ini memenuhi {proteinShare}% kebutuhan protein harianmu.
                 </Text>
               </View>
             </Card>
           ) : (
             <Card className="items-center gap-2 p-8">
               <Ionicons name="search-outline" size={28} color={colors.ink.subtle} />
-              <Text className="text-sm text-ink-muted">
-                Cari makanan untuk mulai mencatat.
+              <Text className="text-center text-sm text-ink-muted">
+                Pencarian makanan belum tersedia. Pilih kembali makanan contoh
+                untuk mencatatnya.
               </Text>
+              <Pressable
+                onPress={() => setSelected(true)}
+                accessibilityRole="button"
+                className="mt-1 active:opacity-70"
+              >
+                <Text className="text-sm font-bold text-brand">Tampilkan lagi</Text>
+              </Pressable>
             </Card>
           )}
 
           <Button
-            label="Tambahkan makanan"
-            onPress={() => router.back()}
-            className={added ? '' : 'opacity-50'}
+            label={saving ? 'Menyimpan...' : 'Tambahkan makanan'}
+            onPress={handleAdd}
+            className={selected && !saving ? '' : 'opacity-50'}
           />
         </View>
       </ScrollView>

@@ -19,10 +19,10 @@ export default function EditProfileScreen() {
 
   const setField = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const [firstName, ...rest] = form.name.trim().split(' ');
 
-    updateUser({
+    await updateUser({
       firstName: firstName ?? user.firstName,
       lastName: rest.join(' '),
       email: form.email,

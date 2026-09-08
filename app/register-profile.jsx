@@ -21,8 +21,8 @@ export default function RegisterProfileScreen() {
   const [weight, setWeight] = useState('');
   const [program, setProgram] = useState('cutting');
 
-  const handleContinue = () => {
-    updateUser({
+  const handleContinue = async () => {
+    await updateUser({
       activityLevel,
       gender,
       program,

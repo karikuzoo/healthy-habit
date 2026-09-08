@@ -1,24 +1,19 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { differenceInYears, format, parseISO } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { id as idLocale } from 'date-fns/locale';
+import { useSQLiteContext } from 'expo-sqlite';
+import { Loading } from '../components/Loading';
+import { seedDemoDayIfEmpty } from '../db/foodLogs';
+import { ensureUser, updateUserRow } from '../db/users';
 
 const UserContext = createContext(null);
-
-const defaultUser = {
-  firstName: 'Padlan',
-  lastName: 'Prabowo',
-  email: 'padlan@email.com',
-  gender: 'Laki-Laki',
-  // Disimpan sebagai ISO; umur dan label tampilan diturunkan darinya
-  birthDate: '1998-08-12',
-  height: 182,
-  weight: 78,
-  activityLevel: 'sedentary',
-  program: 'bulking',
-  targetGoal: 'Lebih bugar dan tidur teratur',
-  avatar: null,
-  units: 'metric',
-};
 
 const ACTIVITY_MULTIPLIERS = {
   sedentary: 1.2,
@@ -43,22 +38,51 @@ const MACRO_SPLIT = {
 };
 
 export function UserProvider({ children }) {
-  const [user, setUser] = useState(defaultUser);
+  const db = useSQLiteContext();
+  const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const updateUser = useCallback((updates) => {
-    setUser((prev) => ({ ...prev, ...updates }));
-  }, []);
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      const row = await ensureUser(db);
+      // Sementara, sampai pencarian makanan (NUT-6) tersedia — hapus bersama
+      // `seedDemoDayIfEmpty` begitu makanan bisa dicari sendiri.
+      await seedDemoDayIfEmpty(db, row.id);
+      if (active) setUser(row);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [db]);
+
+  /**
+   * Tulis ke SQLite lebih dulu, lalu pakai baris hasil tulis itu sebagai
+   * state. Dengan begitu UI tidak pernah menampilkan nilai yang gagal
+   * tersimpan, dan tidak ada dua sumber kebenaran.
+   */
+  const updateUser = useCallback(
+    async (updates) => {
+      if (!user) return;
+      const row = await updateUserRow(db, user.id, updates);
+      setUser(row);
+    },
+    [db, user],
+  );
 
   const login = useCallback(() => setIsLoggedIn(true), []);
   const logout = useCallback(() => setIsLoggedIn(false), []);
 
   const value = useMemo(() => {
-    const birth = parseISO(user.birthDate);
-    const age = differenceInYears(new Date(), birth);
+    if (!user) return null;
+
+    const birth = user.birthDate ? parseISO(user.birthDate) : null;
+    const age = birth ? differenceInYears(new Date(), birth) : null;
 
     // Mifflin-St Jeor
-    const base = 10 * user.weight + 6.25 * user.height - 5 * age;
+    const base = 10 * user.weight + 6.25 * user.height - 5 * (age ?? 0);
     const bmr = Math.round(user.gender === 'Laki-Laki' ? base + 5 : base - 161);
 
     const tdee = Math.round(bmr * (ACTIVITY_MULTIPLIERS[user.activityLevel] ?? 1.55));
@@ -75,7 +99,7 @@ export function UserProvider({ children }) {
       logout,
       fullName: `${user.firstName} ${user.lastName}`.trim(),
       age,
-      birthDateLabel: format(birth, 'd MMMM yyyy', { locale: id }),
+      birthDateLabel: birth ? format(birth, 'd MMMM yyyy', { locale: idLocale }) : '',
       bmr,
       tdee,
       targetCalories,
@@ -86,6 +110,9 @@ export function UserProvider({ children }) {
       },
     };
   }, [user, updateUser, isLoggedIn, login, logout]);
+
+  // Profil dibaca dari SQLite; tahan render sampai baris pertama tersedia
+  if (!value) return <Loading />;
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

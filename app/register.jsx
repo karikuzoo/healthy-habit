@@ -18,8 +18,8 @@ export default function RegisterScreen() {
 
   const setField = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleContinue = () => {
-    updateUser({
+  const handleContinue = async () => {
+    await updateUser({
       firstName: form.firstName,
       lastName: form.lastName,
       email: form.email,

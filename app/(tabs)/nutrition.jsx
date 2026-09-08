@@ -1,10 +1,11 @@
-import React from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import { Button, Card, ProgressBar, Screen } from '../../src/components';
 import { colors } from '../../src/theme/colors';
-import { meals, sumItems, sumMeals } from '../../src/data/nutrition';
+import { dailyTotals, listMealsForDay, softDeleteFoodLog } from '../../src/db/foodLogs';
 import { formatNumber } from '../../src/lib/format';
 import { useUser } from '../../src/context/UserContext';
 
@@ -14,9 +15,45 @@ const MACRO_COLUMNS = [
   { key: 'fat', label: 'FAT', color: colors.macro.fat },
 ];
 
+const EMPTY_TOTALS = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
 export default function NutritionScreen() {
-  const { targetCalories, macroTargets } = useUser();
-  const consumed = sumMeals(meals);
+  const db = useSQLiteContext();
+  const { user, targetCalories, macroTargets } = useUser();
+
+  const [meals, setMeals] = useState([]);
+  const [consumed, setConsumed] = useState(EMPTY_TOTALS);
+
+  const load = useCallback(async () => {
+    const [mealRows, totals] = await Promise.all([
+      listMealsForDay(db, user.id),
+      dailyTotals(db, user.id),
+    ]);
+    setMeals(mealRows);
+    setConsumed(totals);
+  }, [db, user.id]);
+
+  // Muat ulang setiap layar difokuskan, supaya makanan yang baru ditambahkan
+  // dari layar lain langsung terlihat.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  const confirmDelete = (item) => {
+    Alert.alert('Hapus makanan ini?', item.name, [
+      { text: 'Batal', style: 'cancel' },
+      {
+        text: 'Hapus',
+        style: 'destructive',
+        onPress: async () => {
+          await softDeleteFoodLog(db, item.id);
+          load();
+        },
+      },
+    ]);
+  };
 
   return (
     <Screen>
@@ -29,7 +66,7 @@ export default function NutritionScreen() {
             </Text>
           </View>
 
-          {/* Total harian dihitung dari daftar makanan di bawah */}
+          {/* Total dijumlahkan oleh SQLite, bukan dihitung ulang di JS */}
           <Card className="p-5">
             <View className="mb-3 flex-row items-center justify-between">
               <Text className="text-sm font-semibold text-ink-muted">Daily Consumed</Text>
@@ -58,16 +95,21 @@ export default function NutritionScreen() {
             </View>
           </Card>
 
-          {meals.map((meal) => {
-            const total = sumItems(meal.items);
-
-            return (
-              <View key={meal.id} className="gap-3">
+          {meals.length === 0 ? (
+            <Card className="items-center gap-2 p-8">
+              <Ionicons name="restaurant-outline" size={28} color={colors.ink.subtle} />
+              <Text className="text-sm text-ink-muted">
+                Belum ada catatan makanan hari ini.
+              </Text>
+            </Card>
+          ) : (
+            meals.map((meal) => (
+              <View key={meal.slot} className="gap-3">
                 <View className="flex-row items-center justify-between">
                   <Text className="text-lg font-bold text-ink">
-                    {meal.name}{' '}
+                    {meal.label}{' '}
                     <Text className="text-sm font-normal text-ink-muted">
-                      {formatNumber(total.calories)} kkal
+                      {formatNumber(meal.totals.calories)} kkal
                     </Text>
                   </Text>
 
@@ -82,9 +124,12 @@ export default function NutritionScreen() {
 
                 <Card className="overflow-hidden">
                   {meal.items.map((item, index) => (
-                    <View
+                    <Pressable
                       key={item.id}
-                      className={`flex-row items-center gap-3 p-4 ${
+                      onLongPress={() => confirmDelete(item)}
+                      accessibilityRole="button"
+                      accessibilityHint="Tekan lama untuk menghapus"
+                      className={`flex-row items-center gap-3 p-4 active:bg-surface-sunken ${
                         index > 0 ? 'border-t border-line-soft' : ''
                       }`}
                     >
@@ -100,12 +145,12 @@ export default function NutritionScreen() {
                       <Text className="text-sm font-bold text-brand-dark">
                         {item.calories} kkal
                       </Text>
-                    </View>
+                    </Pressable>
                   ))}
                 </Card>
               </View>
-            );
-          })}
+            ))
+          )}
 
           <Button
             label="Tambahkan makanan"
