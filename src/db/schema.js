@@ -25,7 +25,6 @@ const SCHEMA_VERSION = 1;
 
 const V1 = `
 PRAGMA journal_mode = 'wal';
-PRAGMA foreign_keys = ON;
 
 CREATE TABLE users (
   id            TEXT PRIMARY KEY NOT NULL,
@@ -137,6 +136,16 @@ CREATE INDEX idx_step_logs_unsynced ON step_logs(synced_at) WHERE synced_at IS N
  * Versi schema dilacak dengan `PRAGMA user_version`.
  */
 export async function migrate(db) {
+  /**
+   * `foreign_keys` adalah setelan PER-KONEKSI dan tidak ikut tersimpan di
+   * file database — berbeda dari `journal_mode`. Jadi harus dinyalakan
+   * ulang setiap kali database dibuka, BUKAN sekali saat migrasi.
+   *
+   * Kalau ditaruh di dalam skrip V1, ON DELETE CASCADE akan diam-diam mati
+   * pada peluncuran kedua dan seterusnya, karena migrasi dilewati.
+   */
+  await db.execAsync('PRAGMA foreign_keys = ON');
+
   const row = await db.getFirstAsync('PRAGMA user_version');
   let version = row?.user_version ?? 0;
 

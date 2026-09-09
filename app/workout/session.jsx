@@ -2,9 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import { Button, Card, Screen, ScreenHeader } from '../../src/components';
 import { colors } from '../../src/theme/colors';
-import { formatSets, todayWorkout } from '../../src/data/workout';
+import { estimateCalories, formatSets, todayWorkout } from '../../src/data/workout';
+import { getExerciseProgress, logExerciseSession } from '../../src/db/workoutLogs';
+import { useUser } from '../../src/context/UserContext';
 
 /** 95 -> "01:35" */
 function formatClock(totalSeconds) {
@@ -14,6 +17,8 @@ function formatClock(totalSeconds) {
 }
 
 export default function SessionScreen() {
+  const db = useSQLiteContext();
+  const { user } = useUser();
   const { exercise: exerciseId } = useLocalSearchParams();
 
   /**
@@ -28,8 +33,36 @@ export default function SessionScreen() {
   const [startedAt, setStartedAt] = useState(null);
   const [now, setNow] = useState(() => Date.now());
   const [completedSets, setCompletedSets] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  /**
+   * Set yang SUDAH tercatat saat layar dibuka.
+   *
+   * Kalori diakumulasi di database, jadi yang boleh dikirim hanyalah
+   * pertambahannya. Tanpa garis dasar ini, membuka kembali gerakan yang
+   * sudah selesai lalu menekan "Selesai Latihan" akan menambah kalori lagi
+   * tanpa ada kerja baru.
+   */
+  const [baselineSets, setBaselineSets] = useState(0);
 
   const running = startedAt !== null;
+
+  const exercise =
+    todayWorkout.exercises.find((item) => item.id === exerciseId) ?? todayWorkout.exercises[0];
+  const position = todayWorkout.exercises.findIndex((item) => item.id === exercise.id);
+
+  // Lanjutkan dari set yang sudah tercatat hari ini, bukan mulai dari nol
+  useEffect(() => {
+    let active = true;
+    getExerciseProgress(db, user.id, exercise.id).then((sets) => {
+      if (!active) return;
+      setCompletedSets(sets);
+      setBaselineSets(sets);
+    });
+    return () => {
+      active = false;
+    };
+  }, [db, user.id, exercise.id]);
 
   // Tick 500ms supaya angka detik tidak tertinggal sampai satu detik
   useEffect(() => {
@@ -65,15 +98,45 @@ export default function SessionScreen() {
     ]);
   }, [elapsed, reset]);
 
-  const exercise =
-    todayWorkout.exercises.find((item) => item.id === exerciseId) ?? todayWorkout.exercises[0];
-
   const allSetsDone = completedSets >= exercise.sets;
 
-  // Estimasi kalori mengikuti waktu yang benar-benar berjalan
-  const caloriesPerSecond =
-    todayWorkout.estimatedCalories / (todayWorkout.durationMinutes * 60);
-  const burned = Math.round(elapsed * caloriesPerSecond);
+  // Hanya set BARU pada kunjungan ini yang dihitung, karena kalori
+  // diakumulasi di sisi database.
+  const newSets = Math.max(completedSets - baselineSets, 0);
+
+  // Dihitung dari set baru maupun waktu berjalan — mana yang lebih besar.
+  // Timer di layar ini opsional, jadi kalori tidak boleh bergantung hanya
+  // padanya.
+  const burned = estimateCalories({
+    exercise,
+    completedSets: newSets,
+    elapsedSeconds: elapsed,
+  });
+
+  const handleFinish = async () => {
+    if (saving) return;
+
+    // Tidak ada yang perlu disimpan kalau tidak ada waktu maupun set baru
+    if (elapsed === 0 && newSets === 0) {
+      router.back();
+      return;
+    }
+
+    setSaving(true);
+
+    await logExerciseSession(db, user.id, {
+      exerciseId: exercise.id,
+      name: exercise.name,
+      setsPlanned: exercise.sets,
+      setsCompleted: completedSets,
+      reps: exercise.reps,
+      position,
+      durationSeconds: elapsed,
+      calories: burned,
+    });
+
+    router.back();
+  };
 
   return (
     <Screen>
@@ -129,7 +192,9 @@ export default function SessionScreen() {
           <Text className="text-2xl font-bold text-ink">{exercise.name}</Text>
           <Text className="text-base text-ink-muted">{formatSets(exercise)}</Text>
           <Text className="mt-2 text-sm font-semibold text-brand">
-            Set {Math.min(completedSets + 1, exercise.sets)} dari {exercise.sets}
+            {allSetsDone
+              ? `${exercise.sets} dari ${exercise.sets} set selesai`
+              : `Set ${completedSets + 1} dari ${exercise.sets}`}
           </Text>
         </Card>
 
@@ -140,7 +205,11 @@ export default function SessionScreen() {
             onPress={() => setCompletedSets((prev) => Math.min(prev + 1, exercise.sets))}
             className={allSetsDone ? 'opacity-50' : ''}
           />
-          <Button label="Selesai Latihan" onPress={() => router.back()} />
+          <Button
+            label={saving ? 'Menyimpan...' : 'Selesai Latihan'}
+            onPress={handleFinish}
+            className={saving ? 'opacity-50' : ''}
+          />
         </View>
       </View>
     </Screen>

@@ -4,7 +4,7 @@
 > Healthy Habit. Status setiap requirement ditandai eksplisit agar dokumen ini
 > tidak berbeda dari kondisi kode.
 >
-> **Terakhir diperbarui:** 8 September 2026
+> **Terakhir diperbarui:** 9 September 2026
 > **Status produk:** pengembangan awal, belum dirilis
 
 **Legenda status:** ✅ selesai · 🚧 sebagian · ⬜ belum dikerjakan · ❓ perlu keputusan
@@ -92,14 +92,33 @@ kata sandi, aturan format email, rentang wajar tinggi/berat, batas usia minimum.
 | ID | Requirement | Status |
 |---|---|---|
 | HOME-1 | Sapaan sesuai waktu + nama depan pengguna | 🚧 teks "Selamat pagi" masih tetap |
-| HOME-2 | Skor harian 0–100 dengan ring progres | 🚧 tampil, rumus belum ada |
+| HOME-2 | Skor harian 0–100 dengan ring progres | ✅ dihitung dari tidur/nutrisi/latihan |
 | HOME-3 | Kartu langkah: jumlah, target, persentase, sisa langkah | 🚧 angka masih contoh |
-| HOME-4 | Ringkasan tidur, kalori, dan durasi latihan hari ini | 🚧 tidur & kalori dari database, latihan masih contoh |
-| HOME-5 | Kartu rekomendasi harian | 🚧 teks masih tetap |
+| HOME-4 | Ringkasan tidur, kalori, dan durasi latihan hari ini | ✅ ketiganya dari database |
+| HOME-5 | Kartu rekomendasi harian | 🚧 teks masih tetap; kalimat skor sudah dinamis |
 
-**HOME-2 perlu keputusan** ❓ — skor harian saat ini angka mati (82). Rumusnya
-harus ditetapkan: bobot tiap komponen (tidur, langkah, kalori, latihan) dan
-cara penanganan hari dengan data tidak lengkap.
+**HOME-2 — rumus skor harian** (ditetapkan 9 Sep 2026, lihat `src/lib/dailyScore.js`)
+
+| Komponen | Bobot | Bentuk kurva |
+|---|---|---|
+| Tidur | 35% | Pita: penuh 7–9 jam, nol di ≤4 jam dan ≥12 jam |
+| Nutrisi | 35% | Proporsional sampai target, lalu turun ke nol di 150% target |
+| Latihan | 30% | Linear terhadap jumlah gerakan selesai |
+| Langkah | 0% | Dikeluarkan — belum ada sumber data |
+
+Tidur dinilai dengan pita karena tidur adalah peristiwa yang sudah selesai
+saat dinilai; kekurangan tidak bisa "disusul". Kalori justru terakumulasi
+sepanjang hari, jadi kekurangan di siang hari diberi kredit proporsional —
+kalau dipakai pita, skor akan nol sepanjang hari lalu melompat di malam hari.
+Kelebihan kalori tetap dihukum karena sudah terjadi dan tidak bisa dibatalkan.
+
+Komponen tanpa data dinilai 0, bukan dikeluarkan dari perhitungan. Kalau
+dikeluarkan lalu bobotnya dinormalkan ulang, pengguna yang baru mencatat
+tidur saja bisa memperoleh 100 padahal harinya belum berjalan.
+
+**Batasan yang diketahui:** skor tidak mengenal waktu. Asupan 60% target
+menghasilkan pesan positif — wajar pada siang hari, menyesatkan pada malam
+hari. Perlu keputusan ❓ apakah skor perlu sadar jam.
 
 **HOME-3 perlu keputusan** ❓ — sumber data langkah. Tanpa integrasi
 pedometer/wearable, langkah harus diinput manual atau fitur ini ditunda.
@@ -147,10 +166,10 @@ Ini menentukan banyak hal, termasuk apakah butuh backend sejak awal.
 | WO-3 | Katalog gerakan per kategori (Kaki, Dada, Punggung, Inti) | ✅ |
 | WO-4 | Sesi latihan dengan penghitung waktu (play/pause/reset, berbasis jam dinding) | ✅ |
 | WO-5 | Menandai set selesai | ✅ |
-| WO-6 | Estimasi kalori terbakar mengikuti waktu berjalan | 🚧 pendekatan linier sederhana |
-| WO-7 | Menyimpan sesi latihan ke database | ⬜ |
+| WO-6 | Estimasi kalori terbakar | ✅ dari set selesai atau waktu berjalan, mana yang lebih besar |
+| WO-7 | Menyimpan sesi latihan ke database | ✅ satu sesi per hari, gerakan sebagai baris anak |
 | WO-8 | Menambahkan gerakan ke rencana hari ini | ⬜ hanya membuka katalog |
-| WO-9 | Riwayat latihan | ⬜ |
+| WO-9 | Riwayat latihan | 🚧 data tersimpan per hari; layar riwayat belum ada |
 | WO-10 | Gambar/animasi peraga gerakan | ⬜ belum ada aset |
 
 ### 3.6 Profil
@@ -231,6 +250,11 @@ Setiap query pembacaan **wajib** menyertakan `WHERE deleted_at IS NULL`.
 
 Migrasi schema dilacak `PRAGMA user_version` di `src/db/schema.js`, dijalankan
 lewat prop `onInit` milik `SQLiteProvider`.
+
+`PRAGMA foreign_keys = ON` dijalankan di setiap pembukaan database, di luar
+pemeriksaan versi — pragma itu bersifat per-koneksi dan tidak tersimpan di
+file (berbeda dari `journal_mode`), jadi menaruhnya di dalam skrip migrasi
+akan membuat ON DELETE CASCADE mati pada peluncuran kedua.
 
 ---
 
@@ -417,12 +441,10 @@ Memakai skala Tailwind bawaan, ditambah ukuran khusus:
 
 ### 8.2 Urutan pekerjaan berikutnya
 
-1. **Pencatatan nutrisi ke SQLite** — paling banyak query agregasi, paling
-   sering dipakai
-2. **Pencatatan tidur ke SQLite** — paling sederhana, mengaktifkan tren
-   mingguan yang sebenarnya
-3. **Pencatatan latihan ke SQLite** — termasuk riwayat sesi
-4. **Rumus skor harian** (HOME-2) — butuh keputusan produk lebih dulu
+1. ~~Pencatatan nutrisi ke SQLite~~ ✅
+2. ~~Pencatatan tidur ke SQLite~~ ✅
+3. ~~Pencatatan latihan ke SQLite~~ ✅
+4. ~~Rumus skor harian (HOME-2)~~ ✅
 5. **Auth Supabase + sinkronisasi Postgres** — membuka multi-perangkat
 6. **Notifikasi** untuk pengingat waktu tidur
 

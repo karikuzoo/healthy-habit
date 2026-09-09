@@ -55,3 +55,31 @@ export const exercisesByCategory = {
     { id: 'leg-raise', name: 'Leg raise', sets: 3, reps: '15 repetisi' },
   ],
 };
+
+/**
+ * Estimasi kalori terbakar untuk satu gerakan.
+ *
+ * Diambil nilai TERBESAR antara dua sinyal, bukan hanya waktu:
+ *
+ * - set yang selesai — porsi gerakan ini terhadap estimasi rencana
+ * - waktu berjalan   — durasi dikali laju kalori rencana
+ *
+ * Sebelumnya hanya waktu yang dipakai, dan itu menghasilkan 0 kkal untuk
+ * orang yang menandai setnya tanpa menjalankan timer — padahal timernya
+ * opsional dan setnya jelas kerja nyata. Memakai nilai terbesar membuat
+ * kedua cara pakai layar itu tetap dihargai.
+ */
+export function estimateCalories({ exercise, completedSets = 0, elapsedSeconds = 0 }) {
+  const exerciseCount = todayWorkout.exercises.length || 1;
+  const shareOfPlan = todayWorkout.estimatedCalories / exerciseCount;
+
+  const fromSets = exercise.sets
+    ? shareOfPlan * Math.min(completedSets / exercise.sets, 1)
+    : 0;
+
+  const caloriesPerSecond =
+    todayWorkout.estimatedCalories / (todayWorkout.durationMinutes * 60);
+  const fromTime = elapsedSeconds * caloriesPerSecond;
+
+  return Math.round(Math.max(fromSets, fromTime));
+}

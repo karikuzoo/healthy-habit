@@ -8,19 +8,21 @@ import { colors } from '../../src/theme/colors';
 import { useUser } from '../../src/context/UserContext';
 import { formatDuration } from '../../src/data/sleep';
 import { getSleepForDay } from '../../src/db/sleepLogs';
-import { todayWorkout } from '../../src/data/workout';
 import { dailyTotals } from '../../src/db/foodLogs';
+import { todaySummary } from '../../src/db/workoutLogs';
+import { todayWorkout } from '../../src/data/workout';
+import { calculateDailyScore } from '../../src/lib/dailyScore';
 import { formatNumber } from '../../src/lib/format';
 
-const DAILY_SCORE = 82;
 const STEPS = { current: 6248, target: 8000 };
 const EMPTY_TOTALS = { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
 export default function HomeDashboard() {
   const db = useSQLiteContext();
-  const { user } = useUser();
+  const { user, targetCalories } = useUser();
   const [consumed, setConsumed] = useState(EMPTY_TOTALS);
   const [sleepMinutes, setSleepMinutes] = useState(null);
+  const [workout, setWorkout] = useState({ durationMinutes: 0, exercisesDone: 0 });
 
   // Kalori dan tidur hari ini dibaca dari database, bukan data statis
   useFocusEffect(
@@ -29,8 +31,17 @@ export default function HomeDashboard() {
       getSleepForDay(db, user.id).then((row) =>
         setSleepMinutes(row?.durationMinutes ?? null),
       );
+      todaySummary(db, user.id).then(setWorkout);
     }, [db, user.id]),
   );
+
+  const score = calculateDailyScore({
+    sleepMinutes,
+    caloriesConsumed: consumed.calories,
+    calorieTarget: targetCalories,
+    exercisesDone: workout.exercisesDone,
+    exercisesPlanned: todayWorkout.exercises.length,
+  });
 
   const stepsProgress = STEPS.current / STEPS.target;
   const stepsLeft = Math.max(STEPS.target - STEPS.current, 0);
@@ -57,15 +68,15 @@ export default function HomeDashboard() {
                 SKOR HARI INI
               </Text>
               <Text className="mt-2 text-score font-bold text-white">
-                {DAILY_SCORE}
+                {score.total}
                 <Text className="text-xl font-normal text-white/70">/100</Text>
               </Text>
-              <Text className="mt-1 text-sm text-white/80">Kamu dalam ritme yang baik</Text>
+              <Text className="mt-1 text-sm text-white/80">{score.message}</Text>
             </View>
             <ProgressRing
               size={76}
               strokeWidth={7}
-              value={DAILY_SCORE / 100}
+              value={score.total / 100}
               color={colors.brand.light}
               trackColor="rgba(255,255,255,0.18)"
             />
@@ -124,7 +135,7 @@ export default function HomeDashboard() {
                 icon="timer"
                 iconColor={colors.brand.light}
                 iconBgClassName="bg-brand-soft"
-                value={`${todayWorkout.durationMinutes} min`}
+                value={`${workout.durationMinutes} min`}
                 label="Latihan"
               />
             </View>
