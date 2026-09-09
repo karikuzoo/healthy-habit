@@ -1,5 +1,6 @@
 import { newId, nowIso, todayLocal } from './helpers';
 import { mealSlots, slotLabel } from '../data/nutrition';
+import { findCatalogFoodByName, scaleNutrition } from './foods';
 
 const SLOT_ORDER = mealSlots.map((slot) => slot.value);
 
@@ -32,6 +33,7 @@ export async function dailyTotals(db, userId, loggedOn = todayLocal()) {
 function toItem(row) {
   return {
     id: row.id,
+    foodId: row.food_id,
     name: row.name,
     portion: row.portion,
     calories: row.calories,
@@ -82,15 +84,23 @@ export async function listMealsForDay(db, userId, loggedOn = todayLocal()) {
   });
 }
 
-/** Menyimpan satu makanan ke log hari ini. */
+/**
+ * Menyimpan satu makanan ke log hari ini.
+ *
+ * Nama dan angka gizinya disalin ke baris log, bukan hanya dirujuk lewat
+ * `food_id`. Dengan begitu mengoreksi entri katalog tidak mengubah riwayat
+ * yang sudah tercatat — dan catatan tetap utuh meski makanannya kelak
+ * dihapus dari katalog.
+ */
 export async function addFoodLog(db, userId, entry, loggedOn = todayLocal()) {
   const timestamp = nowIso();
 
   await db.runAsync(
     `INSERT INTO food_logs
        (id, user_id, logged_on, logged_at, meal_slot, name, portion, weight_g,
-        calories, protein_g, carbs_g, fat_g, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        calories, protein_g, carbs_g, fat_g,
+        food_id, serving_label, serving_grams, quantity, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       newId(),
       userId,
@@ -104,9 +114,29 @@ export async function addFoodLog(db, userId, entry, loggedOn = todayLocal()) {
       entry.protein ?? 0,
       entry.carbs ?? 0,
       entry.fat ?? 0,
+      entry.foodId ?? null,
+      entry.servingLabel ?? null,
+      entry.servingGrams ?? null,
+      entry.quantity ?? null,
       timestamp,
     ],
   );
+}
+
+/**
+ * Menyimpan beberapa makanan sekaligus dalam satu transaksi.
+ *
+ * Sepiring makan biasanya beberapa item, dan menyimpannya satu per satu
+ * membuka kemungkinan separuh tercatat kalau ada yang gagal di tengah jalan.
+ */
+export async function addFoodLogs(db, userId, entries, loggedOn = todayLocal()) {
+  if (entries.length === 0) return;
+
+  await db.withTransactionAsync(async () => {
+    for (const entry of entries) {
+      await addFoodLog(db, userId, entry, loggedOn);
+    }
+  });
 }
 
 /**
@@ -125,12 +155,35 @@ export async function softDeleteFoodLog(db, foodLogId) {
 }
 
 /**
+ * Susunan makan sehari untuk data contoh.
+ *
+ * Hanya nama dan jumlah yang ditulis di sini — angka gizinya diambil dari
+ * katalog, bukan ditulis ulang. Sebelumnya data contoh memakai makanan
+ * karangan ("Ayam Geprek", "Pecel Ayam") yang tidak ada di katalog, sehingga
+ * catatannya tidak punya `food_id` dan tidak bisa dibuka detailnya.
+ */
+const DEMO_DAY = [
+  { slot: 'sarapan', name: 'Telur Ceplok', quantity: 1 },
+  { slot: 'sarapan', name: 'Susu Sapi Segar', quantity: 1 },
+  { slot: 'sarapan', name: 'Pisang Ambon', quantity: 1 },
+  { slot: 'siang', name: 'Nasi Putih', quantity: 1 },
+  { slot: 'siang', name: 'Ayam goreng paha', quantity: 1 },
+  { slot: 'siang', name: 'Tahu goreng', quantity: 2 },
+  { slot: 'malam', name: 'Nasi Putih', quantity: 1 },
+  { slot: 'malam', name: 'Ikan Bandeng', quantity: 1 },
+  { slot: 'malam', name: 'Tempe Goreng', quantity: 1 },
+];
+
+/**
  * Mengisi log hari ini dengan contoh, hanya kalau pengguna belum pernah
  * punya catatan makanan sama sekali.
  *
- * Ini penampung sementara supaya aplikasi tidak terlihat kosong sebelum
- * pencarian makanan (NUT-6) tersedia. Hapus fungsi ini beserta
- * pemanggilnya begitu makanan sudah bisa dicari dan ditambahkan sendiri.
+ * Penampung sementara supaya aplikasi tidak terlihat kosong pada peluncuran
+ * pertama. Hapus fungsi ini beserta pemanggilnya begitu tidak diperlukan lagi.
+ *
+ * Makanan yang tidak ditemukan di katalog dilewati, bukan membuat penyemaian
+ * gagal — regenerasi katalog bisa mengubah nama, dan itu tidak boleh membuat
+ * aplikasi tidak bisa dibuka.
  */
 export async function seedDemoDayIfEmpty(db, userId) {
   const { total } = await db.getFirstAsync(
@@ -139,18 +192,30 @@ export async function seedDemoDayIfEmpty(db, userId) {
   );
   if (total > 0) return;
 
-  const demo = [
-    { slot: 'sarapan', name: 'Oatmeal & Pisang', portion: '1 mangkuk', calories: 320, protein: 12, carbs: 44, fat: 8 },
-    { slot: 'sarapan', name: 'Telur Rebus (2 butir)', portion: '2 butir', calories: 130, protein: 11, carbs: 14, fat: 19 },
-    { slot: 'siang', name: 'Ayam Geprek', portion: '1 porsi', calories: 520, protein: 42, carbs: 45, fat: 8 },
-    { slot: 'siang', name: 'Kentang Goreng', portion: '1 porsi', calories: 130, protein: 2, carbs: 12, fat: 9 },
-    { slot: 'malam', name: 'Pecel Ayam', portion: '1 porsi', calories: 620, protein: 42, carbs: 45, fat: 8 },
-    { slot: 'malam', name: 'Kentang Rebus', portion: '1 porsi', calories: 130, protein: 2, carbs: 12, fat: 9 },
-  ];
+  const entries = [];
 
-  await db.withTransactionAsync(async () => {
-    for (const entry of demo) {
-      await addFoodLog(db, userId, entry);
-    }
-  });
+  for (const item of DEMO_DAY) {
+    const food = await findCatalogFoodByName(db, item.name);
+    if (!food || food.servings.length === 0) continue;
+
+    const serving = food.servings.find((s) => s.isDefault) ?? food.servings[0];
+    const scaled = scaleNutrition(food, serving.grams, item.quantity);
+
+    entries.push({
+      foodId: food.id,
+      slot: item.slot,
+      name: food.name,
+      portion: item.quantity === 1 ? serving.label : `${item.quantity} × ${serving.label}`,
+      servingLabel: serving.label,
+      servingGrams: serving.grams,
+      quantity: item.quantity,
+      weightG: scaled.grams,
+      calories: scaled.calories,
+      protein: scaled.protein,
+      carbs: scaled.carbs,
+      fat: scaled.fat,
+    });
+  }
+
+  await addFoodLogs(db, userId, entries);
 }

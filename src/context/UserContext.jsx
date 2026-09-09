@@ -10,6 +10,7 @@ import { differenceInYears, format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Loading } from '../components/Loading';
+import { seedCatalogIfEmpty } from '../db/foods';
 import { seedDemoDayIfEmpty } from '../db/foodLogs';
 import { seedDemoWeekIfEmpty } from '../db/sleepLogs';
 import { ensureUser, updateUserRow } from '../db/users';
@@ -48,6 +49,8 @@ export function UserProvider({ children }) {
 
     (async () => {
       const row = await ensureUser(db);
+      // Katalog makanan bawaan; hanya berjalan pada peluncuran pertama
+      await seedCatalogIfEmpty(db);
       // Sementara, sampai pencarian makanan (NUT-6) tersedia — hapus bersama
       // `seedDemoDayIfEmpty` begitu makanan bisa dicari sendiri.
       await seedDemoDayIfEmpty(db, row.id);

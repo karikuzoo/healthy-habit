@@ -131,16 +131,35 @@ pedometer/wearable, langkah harus diinput manual atau fitur ini ditunda.
 | NUT-2 | Rincian protein/karbo/lemak vs target | ✅ |
 | NUT-3 | Makanan dikelompokkan per waktu makan (Sarapan/Siang/Malam/Cemilan) | ✅ |
 | NUT-4 | Total per waktu makan dihitung dari itemnya | ✅ |
-| NUT-5 | Layar detail makanan: makro, gizi mikro, dampak ke kebutuhan harian | ✅ |
-| NUT-6 | Pencarian makanan | ⬜ kolom ada, belum berfungsi |
+| NUT-5 | Layar detail makanan: makro, gizi mikro, dampak ke kebutuhan harian | 🚧 makro & dampak ✅; gizi mikro belum ada di dataset |
+| NUT-6 | Pencarian makanan | ✅ katalog 1.141 entri, pencarian tertunda 200 ms |
 | NUT-7 | Menyimpan catatan makanan ke database | ✅ |
 | NUT-8 | Mengubah & menghapus catatan makanan | 🚧 hapus via tekan-lama; ubah belum ada |
-| NUT-9 | Pengaturan porsi mempengaruhi kalori & makro | ⬜ |
+| NUT-9 | Pengaturan porsi mempengaruhi kalori & makro | ✅ ukuran saji & jumlah mengalikan angka |
 | NUT-10 | Riwayat nutrisi per tanggal | ⬜ |
+| NUT-11 | Menambahkan makanan sendiri ("makanan saya") | ✅ per 100 g, validasi fisik, ukuran saji kustom |
 
-**NUT-6 perlu keputusan** ❓ — sumber basis data makanan. Pilihan: kurasi
-manual makanan Indonesia, API pihak ketiga, atau input bebas oleh pengguna.
-Ini menentukan banyak hal, termasuk apakah butuh backend sejak awal.
+**NUT-6 — sumber data** (ditetapkan 9 Sep 2026)
+
+Katalog dibangun dari CSV gizi eksternal (1.346 baris, per 100 gram),
+dikonversi lewat `scripts/build-food-catalog.mjs` menjadi
+`src/data/foodCatalog.json` — **1.141 entri diterima, 205 dikarantina** ke
+`scripts/food-catalog-review.json` untuk diperiksa manual.
+
+Aturan penyaringan: kalori 0 atau di atas 900 per 100 g ditolak (di atas lemak
+murni), total makro di atas 100 g per 100 g ditolak (hampir selalu titik desimal
+tergeser), dan selisih kalori terhadap hitungan makro di atas 25% ditolak.
+Ambang 25% dipilih, bukan lebih ketat, karena rumus 4/4/9 itu sendiri hanya
+pendekatan — pada 15% entri yang benar seperti "Tahu" ikut terbuang.
+
+Sumber ditandai `'dataset-eksternal'`, **bukan** `'tkpi-2017'`: pola isinya
+sangat menyerupai TKPI ("Minyak Hati Hiu (Eulamia)", varietas beras spesifik),
+tetapi asalnya tidak terbukti sehingga menandainya sebagai data Kemenkes akan
+mengaku-aku asal yang tidak dapat dibuktikan.
+
+**Perlu diputuskan** ❓ — lisensi CSV sumber belum terverifikasi. Untuk
+keperluan belajar risikonya kecil; untuk rilis komersial asalnya harus
+dipastikan lebih dahulu.
 
 ### 3.4 Tidur
 
@@ -230,10 +249,18 @@ Postgres di server untuk akun dan sinkronisasi.
 ### 4.3 Tabel
 
 `users` · `food_logs` · `sleep_logs` · `workout_logs` ·
-`workout_log_exercises` · `step_logs`
+`workout_log_exercises` · `step_logs` · `foods` · `food_servings`
 
 Katalog gerakan dan slot waktu makan tetap sebagai data referensi di kode
-(`src/data/`), bukan di database.
+(`src/data/`). Katalog makanan pindah ke tabel `foods` sejak schema v2, karena
+harus bisa dicari dan ditambahi oleh pengguna.
+
+**Schema v2** (9 Sep 2026) menambahkan `foods` dan `food_servings`, plus empat
+kolom pada `food_logs` (`food_id`, `serving_label`, `serving_grams`,
+`quantity`). Gizi katalog disimpan per 100 gram mengikuti normalisasi TKPI dan
+USDA. `food_logs.food_id` sengaja **tanpa** foreign key: dengan cascade,
+merapikan katalog akan menghapus riwayat pengguna; tanpa cascade, katalog
+tidak bisa dirapikan. Catatan harus bisa hidup lebih lama dari entri katalognya.
 
 ### 4.4 Pola kolom wajib — WAJIB untuk setiap tabel baru
 
@@ -455,6 +482,7 @@ Memakai skala Tailwind bawaan, ditambah ukuran khusus:
 | `@react-native-async-storage/async-storage` | Terpasang, tidak dipakai. `expo-sqlite/kv-store` adalah pengganti langsungnya — dependensi ini bisa dibuang |
 | `expo-haptics`, `expo-linear-gradient` | Terpasang, tidak dipakai. Buang atau gunakan |
 | Seluruh gambar | Masih placeholder ikon; belum ada aset foto |
+| Data contoh | `seedDemoDayIfEmpty` & `seedDemoWeekIfEmpty` masih menyemai hari/minggu contoh pada peluncuran pertama; hapus bila tidak diperlukan lagi |
 | Judul bagian berbahasa Inggris | "Active Program", "Settings", "Weekly Trend" — perlu keputusan: terjemahkan atau pertahankan |
 | Konversi satuan | PROF-7 mengubah label saja, angka belum dikonversi |
 | Tanpa uji otomatis | Verifikasi saat ini bersandar pada keberhasilan bundling |

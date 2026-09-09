@@ -1,0 +1,1649 @@
+{
+ "impossible": [
+  {
+   "calories": 0,
+   "protein": 0,
+   "fat": 0.2,
+   "carbs": 0,
+   "name": "Agar-agar",
+   "macroSum": 0.2
+  },
+  {
+   "calories": 598,
+   "protein": 74.3,
+   "fat": 26.9,
+   "carbs": 9.2,
+   "name": "Dendeng mujahir goreng",
+   "macroSum": 110.4
+  },
+  {
+   "calories": 598,
+   "protein": 74.3,
+   "fat": 26.9,
+   "carbs": 9.2,
+   "name": "Ikan Mujair dendeng goreng",
+   "macroSum": 110.4
+  },
+  {
+   "calories": 582,
+   "protein": 68.3,
+   "fat": 15.2,
+   "carbs": 37.2,
+   "name": "Ikan Mujair dendeng mentah",
+   "macroSum": 120.7
+  },
+  {
+   "calories": 488,
+   "protein": 25.6,
+   "fat": 25.6,
+   "carbs": 59.6,
+   "name": "Kacang Sukro Putih",
+   "macroSum": 110.8
+  },
+  {
+   "calories": 748,
+   "protein": 20.8,
+   "fat": 20.8,
+   "carbs": 124.8,
+   "name": "Kacang Telur",
+   "macroSum": 166.4
+  },
+  {
+   "calories": 46.7,
+   "protein": 17.3,
+   "fat": 17.3,
+   "carbs": 81.3,
+   "name": "Kerupuk Sayong",
+   "macroSum": 115.9
+  },
+  {
+   "calories": 340,
+   "protein": 30,
+   "fat": 30,
+   "carbs": 52,
+   "name": "Kerupuk Udang",
+   "macroSum": 112
+  },
+  {
+   "calories": 359,
+   "protein": 17.2,
+   "fat": 68.2,
+   "carbs": 332,
+   "name": "Kerupuk Udang berpati",
+   "macroSum": 417.4
+  },
+  {
+   "calories": 512,
+   "protein": 26,
+   "fat": 26,
+   "carbs": 60.4,
+   "name": "Kue Tambang",
+   "macroSum": 112.4
+  },
+  {
+   "calories": 902,
+   "protein": 0,
+   "fat": 100,
+   "carbs": 0,
+   "name": "Lemak Babi",
+   "macroSum": 100
+  },
+  {
+   "calories": 902,
+   "protein": 0,
+   "fat": 100,
+   "carbs": 0,
+   "name": "Minyak Hati Hiu (Eulamia)",
+   "macroSum": 100
+  },
+  {
+   "calories": 902,
+   "protein": 0,
+   "fat": 100,
+   "carbs": 0,
+   "name": "Minyak Ikan",
+   "macroSum": 100
+  },
+  {
+   "calories": 902,
+   "protein": 0,
+   "fat": 100,
+   "carbs": 0,
+   "name": "Minyak Kacang Tanah",
+   "macroSum": 100
+  },
+  {
+   "calories": 902,
+   "protein": 0,
+   "fat": 100,
+   "carbs": 0,
+   "name": "Minyak Kelapa Sawit",
+   "macroSum": 100
+  },
+  {
+   "calories": 902,
+   "protein": 0,
+   "fat": 100,
+   "carbs": 0,
+   "name": "Minyak Wijen",
+   "macroSum": 100
+  },
+  {
+   "calories": 940,
+   "protein": 36,
+   "fat": 42,
+   "carbs": 104,
+   "name": "Opak Singkong",
+   "macroSum": 182
+  },
+  {
+   "calories": 514,
+   "protein": 1,
+   "fat": 27.8,
+   "carbs": 647,
+   "name": "Pilus",
+   "macroSum": 675.8
+  }
+ ],
+ "inconsistent": [
+  {
+   "calories": 491,
+   "protein": 24.6,
+   "fat": 16.3,
+   "carbs": 0.2,
+   "name": "Babi hutan masak rica masakan",
+   "computed": 246,
+   "driftPct": 50
+  },
+  {
+   "calories": 39,
+   "protein": 1.5,
+   "fat": 0.3,
+   "carbs": 0.2,
+   "name": "Bawang Merah",
+   "computed": 10,
+   "driftPct": 76
+  },
+  {
+   "calories": 344,
+   "protein": 1.1,
+   "fat": 0.2,
+   "carbs": 28.3,
+   "name": "Beras Siger",
+   "computed": 119,
+   "driftPct": 65
+  },
+  {
+   "calories": 48,
+   "protein": 0.6,
+   "fat": 0,
+   "carbs": 4.4,
+   "name": "Bir (4% alkohol)",
+   "computed": 20,
+   "driftPct": 58
+  },
+  {
+   "calories": 43,
+   "protein": 2.6,
+   "fat": 0,
+   "carbs": 11.6,
+   "name": "Bonggol Pisang",
+   "computed": 57,
+   "driftPct": 32
+  },
+  {
+   "calories": 23,
+   "protein": 1,
+   "fat": 0.8,
+   "carbs": 7.2,
+   "name": "Boros Kunci",
+   "computed": 40,
+   "driftPct": 74
+  },
+  {
+   "calories": 60,
+   "protein": 1,
+   "fat": 60,
+   "carbs": 13,
+   "name": "Bubur",
+   "computed": 596,
+   "driftPct": 893
+  },
+  {
+   "calories": 156,
+   "protein": 2.3,
+   "fat": 0.2,
+   "carbs": 15.6,
+   "name": "Bubur tinotuan (Manado)",
+   "computed": 73,
+   "driftPct": 53
+  },
+  {
+   "calories": 72,
+   "protein": 11.4,
+   "fat": 4.9,
+   "carbs": 1.4,
+   "name": "Bulgogi masakan",
+   "computed": 95,
+   "driftPct": 32
+  },
+  {
+   "calories": 460,
+   "protein": 0.8,
+   "fat": 18.7,
+   "carbs": 17.2,
+   "name": "Cassavastick",
+   "computed": 240,
+   "driftPct": 48
+  },
+  {
+   "calories": 381,
+   "protein": 9,
+   "fat": 35,
+   "carbs": 53.6,
+   "name": "Coklat Susu batang",
+   "computed": 565,
+   "driftPct": 48
+  },
+  {
+   "calories": 12,
+   "protein": 0.1,
+   "fat": 0.1,
+   "carbs": 5,
+   "name": "Cuka",
+   "computed": 21,
+   "driftPct": 77
+  },
+  {
+   "calories": 34,
+   "protein": 4.1,
+   "fat": 0.4,
+   "carbs": 5.8,
+   "name": "Daun Kacang Panjang",
+   "computed": 43,
+   "driftPct": 27
+  },
+  {
+   "calories": 30,
+   "protein": 3.1,
+   "fat": 0.3,
+   "carbs": 5.8,
+   "name": "Daun kacang panjang segar",
+   "computed": 38,
+   "driftPct": 28
+  },
+  {
+   "calories": 59,
+   "protein": 6.4,
+   "fat": 1,
+   "carbs": 9.9,
+   "name": "Daun katuk segar",
+   "computed": 74,
+   "driftPct": 26
+  },
+  {
+   "calories": 48,
+   "protein": 4.5,
+   "fat": 0.8,
+   "carbs": 9.1,
+   "name": "Daun kesum segar",
+   "computed": 62,
+   "driftPct": 28
+  },
+  {
+   "calories": 23,
+   "protein": 3,
+   "fat": 0.3,
+   "carbs": 3.7,
+   "name": "Daun Koro",
+   "computed": 30,
+   "driftPct": 28
+  },
+  {
+   "calories": 60,
+   "protein": 4,
+   "fat": 0.4,
+   "carbs": 4.7,
+   "name": "Daun Labu Siam",
+   "computed": 38,
+   "driftPct": 36
+  },
+  {
+   "calories": 30,
+   "protein": 3.6,
+   "fat": 0.6,
+   "carbs": 4.5,
+   "name": "Daun Labu Waluh",
+   "computed": 38,
+   "driftPct": 26
+  },
+  {
+   "calories": 35,
+   "protein": 4,
+   "fat": 0.3,
+   "carbs": 6.4,
+   "name": "Daun Pakis",
+   "computed": 44,
+   "driftPct": 27
+  },
+  {
+   "calories": 39,
+   "protein": 4.5,
+   "fat": 0.4,
+   "carbs": 6.9,
+   "name": "Daun pakis segar",
+   "computed": 49,
+   "driftPct": 26
+  },
+  {
+   "calories": 29,
+   "protein": 3.4,
+   "fat": 0.1,
+   "carbs": 6.5,
+   "name": "Daun paku segar",
+   "computed": 41,
+   "driftPct": 40
+  },
+  {
+   "calories": 45,
+   "protein": 4.4,
+   "fat": 8,
+   "carbs": 0.5,
+   "name": "Daun Semanggi",
+   "computed": 92,
+   "driftPct": 104
+  },
+  {
+   "calories": 50,
+   "protein": 6.2,
+   "fat": 1.1,
+   "carbs": 7.1,
+   "name": "Daun singkong ampenan segar",
+   "computed": 63,
+   "driftPct": 26
+  },
+  {
+   "calories": 31,
+   "protein": 3.7,
+   "fat": 0.6,
+   "carbs": 4.8,
+   "name": "Daun Singkong rebus",
+   "computed": 39,
+   "driftPct": 27
+  },
+  {
+   "calories": 50,
+   "protein": 6.2,
+   "fat": 1.1,
+   "carbs": 7.1,
+   "name": "Daun singkong segar",
+   "computed": 63,
+   "driftPct": 26
+  },
+  {
+   "calories": 260,
+   "protein": 2,
+   "fat": 15,
+   "carbs": 53,
+   "name": "Deblo",
+   "computed": 355,
+   "driftPct": 37
+  },
+  {
+   "calories": 433,
+   "protein": 55,
+   "fat": 9,
+   "carbs": 0,
+   "name": "Dendeng Daging Sapi",
+   "computed": 301,
+   "driftPct": 30
+  },
+  {
+   "calories": 17.5,
+   "protein": 3.3,
+   "fat": 2.3,
+   "carbs": 39.5,
+   "name": "Dodonkol",
+   "computed": 192,
+   "driftPct": 997
+  },
+  {
+   "calories": 138,
+   "protein": 14,
+   "fat": 0.7,
+   "carbs": 7.4,
+   "name": "Ikan Bekasang",
+   "computed": 92,
+   "driftPct": 33
+  },
+  {
+   "calories": 74,
+   "protein": 25.2,
+   "fat": 1.7,
+   "carbs": 0,
+   "name": "Ikan Gabus segar",
+   "computed": 116,
+   "driftPct": 57
+  },
+  {
+   "calories": 148.9,
+   "protein": 10.4,
+   "fat": 10.4,
+   "carbs": 20.1,
+   "name": "Jagung Sayur (tumis)",
+   "computed": 216,
+   "driftPct": 45
+  },
+  {
+   "calories": 37,
+   "protein": 0.8,
+   "fat": 0.1,
+   "carbs": 12.3,
+   "name": "Jeruk Nipis",
+   "computed": 53,
+   "driftPct": 44
+  },
+  {
+   "calories": 15,
+   "protein": 15.2,
+   "fat": 4.3,
+   "carbs": 8.8,
+   "name": "Jukku pallu kaloa masakan",
+   "computed": 135,
+   "driftPct": 798
+  },
+  {
+   "calories": 250,
+   "protein": 2.6,
+   "fat": 2.5,
+   "carbs": 35.4,
+   "name": "Kabuto",
+   "computed": 175,
+   "driftPct": 30
+  },
+  {
+   "calories": 123,
+   "protein": 8.4,
+   "fat": 0.6,
+   "carbs": 1.8,
+   "name": "Kacang Gude muda",
+   "computed": 46,
+   "driftPct": 62
+  },
+  {
+   "calories": 286,
+   "protein": 30.2,
+   "fat": 15.6,
+   "carbs": 30.1,
+   "name": "Kacang Kedelai basah",
+   "computed": 382,
+   "driftPct": 33
+  },
+  {
+   "calories": 286,
+   "protein": 30.2,
+   "fat": 15.6,
+   "carbs": 30.1,
+   "name": "Kacang kedelai segar",
+   "computed": 382,
+   "driftPct": 33
+  },
+  {
+   "calories": 66,
+   "protein": 2.8,
+   "fat": 6.8,
+   "carbs": 3.4,
+   "name": "Kalakai",
+   "computed": 86,
+   "driftPct": 30
+  },
+  {
+   "calories": 29,
+   "protein": 3,
+   "fat": 0.3,
+   "carbs": 5.4,
+   "name": "Kangkung",
+   "computed": 36,
+   "driftPct": 25
+  },
+  {
+   "calories": 30,
+   "protein": 3.2,
+   "fat": 0.7,
+   "carbs": 4.7,
+   "name": "Kangkung kukus",
+   "computed": 38,
+   "driftPct": 26
+  },
+  {
+   "calories": 22,
+   "protein": 2.5,
+   "fat": 0.6,
+   "carbs": 3.1,
+   "name": "Kangkung rebus",
+   "computed": 28,
+   "driftPct": 26
+  },
+  {
+   "calories": 42,
+   "protein": 3.3,
+   "fat": 0.2,
+   "carbs": 9.6,
+   "name": "Kapri Muda",
+   "computed": 53,
+   "driftPct": 27
+  },
+  {
+   "calories": 292,
+   "protein": 11.2,
+   "fat": 11.2,
+   "carbs": 2.8,
+   "name": "Karoket",
+   "computed": 157,
+   "driftPct": 46
+  },
+  {
+   "calories": 275,
+   "protein": 12.6,
+   "fat": 14.8,
+   "carbs": 54.6,
+   "name": "Katul Beras",
+   "computed": 402,
+   "driftPct": 46
+  },
+  {
+   "calories": 46,
+   "protein": 5.7,
+   "fat": 1.3,
+   "carbs": 9,
+   "name": "Kecap",
+   "computed": 71,
+   "driftPct": 53
+  },
+  {
+   "calories": 35,
+   "protein": 2.9,
+   "fat": 0.2,
+   "carbs": 0.8,
+   "name": "Kecipir buah muda",
+   "computed": 17,
+   "driftPct": 53
+  },
+  {
+   "calories": 59,
+   "protein": 18,
+   "fat": 1.1,
+   "carbs": 3.6,
+   "name": "Kerang",
+   "computed": 96,
+   "driftPct": 63
+  },
+  {
+   "calories": 86,
+   "protein": 1.6,
+   "fat": 0.2,
+   "carbs": 13,
+   "name": "Kokosan",
+   "computed": 60,
+   "driftPct": 30
+  },
+  {
+   "calories": 129,
+   "protein": 12.3,
+   "fat": 0.5,
+   "carbs": 35,
+   "name": "Kopi bubuk instant",
+   "computed": 194,
+   "driftPct": 50
+  },
+  {
+   "calories": 33,
+   "protein": 2.7,
+   "fat": 0.2,
+   "carbs": 7.9,
+   "name": "Koro Loke biji",
+   "computed": 44,
+   "driftPct": 34
+  },
+  {
+   "calories": 366,
+   "protein": 4.2,
+   "fat": 4.3,
+   "carbs": 7.9,
+   "name": "Kue Koya",
+   "computed": 87,
+   "driftPct": 76
+  },
+  {
+   "calories": 126.7,
+   "protein": 0.7,
+   "fat": 0.7,
+   "carbs": 57.3,
+   "name": "Kue Pacar Cina",
+   "computed": 238,
+   "driftPct": 88
+  },
+  {
+   "calories": 387,
+   "protein": 16,
+   "fat": 22,
+   "carbs": 3,
+   "name": "Leverwost (sosis hati)",
+   "computed": 274,
+   "driftPct": 29
+  },
+  {
+   "calories": 217,
+   "protein": 11,
+   "fat": 1.7,
+   "carbs": 5.1,
+   "name": "Lokan segar",
+   "computed": 80,
+   "driftPct": 63
+  },
+  {
+   "calories": 339,
+   "protein": 10,
+   "fat": 1.7,
+   "carbs": 6.3,
+   "name": "Mi kering",
+   "computed": 81,
+   "driftPct": 76
+  },
+  {
+   "calories": 218,
+   "protein": 0.8,
+   "fat": 16,
+   "carbs": 50.2,
+   "name": "Misro",
+   "computed": 348,
+   "driftPct": 60
+  },
+  {
+   "calories": 276,
+   "protein": 3.2,
+   "fat": 3.2,
+   "carbs": 30.2,
+   "name": "Nasi Goreng",
+   "computed": 162,
+   "driftPct": 41
+  },
+  {
+   "calories": 9,
+   "protein": 2.1,
+   "fat": 6,
+   "carbs": 7.1,
+   "name": "Olah-olah",
+   "computed": 91,
+   "driftPct": 909
+  },
+  {
+   "calories": 46,
+   "protein": 0.5,
+   "fat": 12,
+   "carbs": 12.2,
+   "name": "Pepaya segar",
+   "computed": 159,
+   "driftPct": 245
+  },
+  {
+   "calories": 107,
+   "protein": 15.9,
+   "fat": 0.6,
+   "carbs": 0.4,
+   "name": "Pinda masakan",
+   "computed": 71,
+   "driftPct": 34
+  },
+  {
+   "calories": 220,
+   "protein": 2.3,
+   "fat": 2.3,
+   "carbs": 6.3,
+   "name": "Pisang Goreng",
+   "computed": 55,
+   "driftPct": 75
+  },
+  {
+   "calories": 625,
+   "protein": 1,
+   "fat": 0,
+   "carbs": 8.1,
+   "name": "Pisang Siam goreng",
+   "computed": 36,
+   "driftPct": 94
+  },
+  {
+   "calories": 136,
+   "protein": 43,
+   "fat": 2.4,
+   "carbs": 3,
+   "name": "Ragi",
+   "computed": 206,
+   "driftPct": 51
+  },
+  {
+   "calories": 299,
+   "protein": 29.4,
+   "fat": 3.6,
+   "carbs": 3.2,
+   "name": "Rebon kering",
+   "computed": 163,
+   "driftPct": 46
+  },
+  {
+   "calories": 324,
+   "protein": 4.2,
+   "fat": 34.3,
+   "carbs": 55.6,
+   "name": "Santan (kelapa saja)",
+   "computed": 548,
+   "driftPct": 69
+  },
+  {
+   "calories": 212,
+   "protein": 18,
+   "fat": 10.6,
+   "carbs": 59.3,
+   "name": "Sapi abon",
+   "computed": 405,
+   "driftPct": 91
+  },
+  {
+   "calories": 344,
+   "protein": 30,
+   "fat": 20,
+   "carbs": 43,
+   "name": "Sari Kedelai bubuk",
+   "computed": 472,
+   "driftPct": 37
+  },
+  {
+   "calories": 22,
+   "protein": 2.3,
+   "fat": 0.3,
+   "carbs": 4,
+   "name": "Sawi",
+   "computed": 28,
+   "driftPct": 27
+  },
+  {
+   "calories": 9,
+   "protein": 1,
+   "fat": 0.1,
+   "carbs": 1.7,
+   "name": "Sawi putih / pecai segar",
+   "computed": 12,
+   "driftPct": 30
+  },
+  {
+   "calories": 17,
+   "protein": 1.7,
+   "fat": 0.3,
+   "carbs": 3,
+   "name": "Selada Air",
+   "computed": 22,
+   "driftPct": 26
+  },
+  {
+   "calories": 19,
+   "protein": 2.7,
+   "fat": 0.2,
+   "carbs": 2.9,
+   "name": "Selada Air rebus",
+   "computed": 24,
+   "driftPct": 27
+  },
+  {
+   "calories": 298,
+   "protein": 8,
+   "fat": 23.8,
+   "carbs": 48.9,
+   "name": "Serbuk Coklat",
+   "computed": 442,
+   "driftPct": 48
+  },
+  {
+   "calories": 101,
+   "protein": 1.7,
+   "fat": 0.6,
+   "carbs": 35.2,
+   "name": "Srikaya",
+   "computed": 153,
+   "driftPct": 51
+  },
+  {
+   "calories": 41,
+   "protein": 3.5,
+   "fat": 2.5,
+   "carbs": 5,
+   "name": "Susu Kedelai",
+   "computed": 57,
+   "driftPct": 38
+  },
+  {
+   "calories": 28,
+   "protein": 3,
+   "fat": 0.8,
+   "carbs": 4,
+   "name": "Taoge seduh",
+   "computed": 35,
+   "driftPct": 26
+  },
+  {
+   "calories": 34,
+   "protein": 3.7,
+   "fat": 1.2,
+   "carbs": 4.3,
+   "name": "Taoge segar",
+   "computed": 43,
+   "driftPct": 26
+  },
+  {
+   "calories": 25,
+   "protein": 4.6,
+   "fat": 0.4,
+   "carbs": 3,
+   "name": "Tebu Terubuk",
+   "computed": 34,
+   "driftPct": 36
+  },
+  {
+   "calories": 132,
+   "protein": 19.5,
+   "fat": 0.7,
+   "carbs": 67.8,
+   "name": "Teh",
+   "computed": 356,
+   "driftPct": 169
+  },
+  {
+   "calories": 73,
+   "protein": 5.7,
+   "fat": 1.3,
+   "carbs": 4.2,
+   "name": "Tempe Gembus",
+   "computed": 51,
+   "driftPct": 30
+  },
+  {
+   "calories": 347,
+   "protein": 35.9,
+   "fat": 20.6,
+   "carbs": 29.9,
+   "name": "Tepung Kacang Kedelai",
+   "computed": 449,
+   "driftPct": 29
+  },
+  {
+   "calories": 23,
+   "protein": 2.9,
+   "fat": 0.2,
+   "carbs": 4.1,
+   "name": "Toge kacang ijo",
+   "computed": 30,
+   "driftPct": 30
+  },
+  {
+   "calories": 35,
+   "protein": 5,
+   "fat": 0.2,
+   "carbs": 5.8,
+   "name": "Toge kacang tunggak",
+   "computed": 45,
+   "driftPct": 29
+  },
+  {
+   "calories": 67,
+   "protein": 9,
+   "fat": 2.6,
+   "carbs": 6.4,
+   "name": "Toge kedelai",
+   "computed": 85,
+   "driftPct": 27
+  },
+  {
+   "calories": 28,
+   "protein": 3,
+   "fat": 0.8,
+   "carbs": 4,
+   "name": "Toge seduh",
+   "computed": 35,
+   "driftPct": 26
+  },
+  {
+   "calories": 160,
+   "protein": 3.7,
+   "fat": 1.3,
+   "carbs": 55.3,
+   "name": "Ubi Jalar Goreng",
+   "computed": 248,
+   "driftPct": 55
+  },
+  {
+   "calories": 114,
+   "protein": 1.4,
+   "fat": 9.6,
+   "carbs": 25.6,
+   "name": "Ubi Jalar Rebus",
+   "computed": 194,
+   "driftPct": 71
+  },
+  {
+   "calories": 184,
+   "protein": 1.4,
+   "fat": 0.3,
+   "carbs": 22.5,
+   "name": "Ubi Jalar Sayur",
+   "computed": 98,
+   "driftPct": 47
+  },
+  {
+   "calories": 120,
+   "protein": 2.8,
+   "fat": 0.5,
+   "carbs": 82.3,
+   "name": "Umbi Uwi segar",
+   "computed": 345,
+   "driftPct": 187
+  }
+ ],
+ "notAMeal": [
+  {
+   "calories": 96,
+   "protein": 3.7,
+   "fat": 0.6,
+   "carbs": 19.1,
+   "name": "Ampas kacang hijau"
+  },
+  {
+   "calories": 414,
+   "protein": 26.6,
+   "fat": 18.3,
+   "carbs": 41.3,
+   "name": "Ampas Tahu"
+  },
+  {
+   "calories": 75,
+   "protein": 4.1,
+   "fat": 2.1,
+   "carbs": 10.7,
+   "name": "Ampas tahu kukus"
+  },
+  {
+   "calories": 67,
+   "protein": 5,
+   "fat": 2.1,
+   "carbs": 8.1,
+   "name": "Ampas tahu mentah"
+  },
+  {
+   "calories": 357,
+   "protein": 8.4,
+   "fat": 1.7,
+   "carbs": 77.1,
+   "name": "Beras giling mentah"
+  },
+  {
+   "calories": 369,
+   "protein": 9.5,
+   "fat": 1.4,
+   "carbs": 77.1,
+   "name": "Beras giling var pelita mentah"
+  },
+  {
+   "calories": 357,
+   "protein": 8.4,
+   "fat": 1.7,
+   "carbs": 77.1,
+   "name": "Beras giling var rojolele mentah"
+  },
+  {
+   "calories": 351,
+   "protein": 8,
+   "fat": 1.3,
+   "carbs": 76.9,
+   "name": "Beras hitam mentah"
+  },
+  {
+   "calories": 358,
+   "protein": 5.5,
+   "fat": 0.1,
+   "carbs": 82.7,
+   "name": "Beras jagung kuning kering mentah"
+  },
+  {
+   "calories": 307,
+   "protein": 4.8,
+   "fat": 0.1,
+   "carbs": 71.8,
+   "name": "Beras jagung putih kering mentah"
+  },
+  {
+   "calories": 360,
+   "protein": 8,
+   "fat": 2.3,
+   "carbs": 74.5,
+   "name": "Beras ketan hitam tumbuk mentah"
+  },
+  {
+   "calories": 361,
+   "protein": 7.4,
+   "fat": 0.8,
+   "carbs": 78.4,
+   "name": "Beras ketan putih tumbuk mentah"
+  },
+  {
+   "calories": 376,
+   "protein": 7.5,
+   "fat": 3.8,
+   "carbs": 78,
+   "name": "Beras ladang mentah"
+  },
+  {
+   "calories": 362,
+   "protein": 7.7,
+   "fat": 4.4,
+   "carbs": 73,
+   "name": "Beras menir mentah"
+  },
+  {
+   "calories": 354,
+   "protein": 7.8,
+   "fat": 0.4,
+   "carbs": 79.9,
+   "name": "Beras tumbuk mentah"
+  },
+  {
+   "calories": 352,
+   "protein": 7.3,
+   "fat": 0.9,
+   "carbs": 76.2,
+   "name": "Beras tumbuk merah mentah"
+  },
+  {
+   "calories": 354,
+   "protein": 0.5,
+   "fat": 0.3,
+   "carbs": 87.4,
+   "name": "Bihun Jagung mentah"
+  },
+  {
+   "calories": 348,
+   "protein": 4.7,
+   "fat": 0.1,
+   "carbs": 82.1,
+   "name": "Bihun mentah"
+  },
+  {
+   "calories": 119,
+   "protein": 4.4,
+   "fat": 3.5,
+   "carbs": 18.3,
+   "name": "Bongkrek (tempe bungkil)"
+  },
+  {
+   "calories": 365,
+   "protein": 49.6,
+   "fat": 4.8,
+   "carbs": 30.8,
+   "name": "Buaya daging dendeng mentah"
+  },
+  {
+   "calories": 333,
+   "protein": 29.3,
+   "fat": 3.3,
+   "carbs": 50,
+   "name": "Bungkil Biji Karet"
+  },
+  {
+   "calories": 336,
+   "protein": 37.4,
+   "fat": 13,
+   "carbs": 30.5,
+   "name": "Bungkil Kacang Tanah"
+  },
+  {
+   "calories": 368,
+   "protein": 23,
+   "fat": 15,
+   "carbs": 40,
+   "name": "Bungkil Kelapa"
+  },
+  {
+   "calories": 366,
+   "protein": 11,
+   "fat": 3.3,
+   "carbs": 73,
+   "name": "Cantel mentah"
+  },
+  {
+   "calories": 101,
+   "protein": 2.1,
+   "fat": 0.2,
+   "carbs": 23.2,
+   "name": "Gadung mentah"
+  },
+  {
+   "calories": 95,
+   "protein": 1,
+   "fat": 0.1,
+   "carbs": 22.6,
+   "name": "Ganyong mentah"
+  },
+  {
+   "calories": 82,
+   "protein": 6.7,
+   "fat": 1,
+   "carbs": 10.9,
+   "name": "Ikan Belut Segar mentah"
+  },
+  {
+   "calories": 204,
+   "protein": 34.2,
+   "fat": 5.6,
+   "carbs": 1.9,
+   "name": "Ikan cakalang asap mentah"
+  },
+  {
+   "calories": 198,
+   "protein": 36.5,
+   "fat": 2.2,
+   "carbs": 5.5,
+   "name": "Ikan cakalang asin mentah"
+  },
+  {
+   "calories": 81,
+   "protein": 11.4,
+   "fat": 1.9,
+   "carbs": 3.8,
+   "name": "Ikan calo/ peda mentah"
+  },
+  {
+   "calories": 261,
+   "protein": 38.1,
+   "fat": 2.3,
+   "carbs": 21.9,
+   "name": "Ikan Gabus asap mentah"
+  },
+  {
+   "calories": 258,
+   "protein": 40.3,
+   "fat": 2.3,
+   "carbs": 18.9,
+   "name": "Ikan lomak asin mentah"
+  },
+  {
+   "calories": 156,
+   "protein": 28,
+   "fat": 4,
+   "carbs": 2,
+   "name": "Ikan peda banjar mentah"
+  },
+  {
+   "calories": 157,
+   "protein": 28,
+   "fat": 4.2,
+   "carbs": 1.8,
+   "name": "Ikan Pindang banjar mentah"
+  },
+  {
+   "calories": 170,
+   "protein": 31,
+   "fat": 4.2,
+   "carbs": 0,
+   "name": "Ikan Pindang benggol mentah"
+  },
+  {
+   "calories": 153,
+   "protein": 30,
+   "fat": 2.8,
+   "carbs": 0,
+   "name": "Ikan Pindang layang mentah"
+  },
+  {
+   "calories": 142,
+   "protein": 27,
+   "fat": 3,
+   "carbs": 0,
+   "name": "Ikan Pindang selar mentah"
+  },
+  {
+   "calories": 415,
+   "protein": 61.3,
+   "fat": 17.6,
+   "carbs": 2.9,
+   "name": "Ikan sale lais mentah"
+  },
+  {
+   "calories": 284,
+   "protein": 34.1,
+   "fat": 9.9,
+   "carbs": 14.6,
+   "name": "Ikan saluang kering mentah"
+  },
+  {
+   "calories": 138,
+   "protein": 27,
+   "fat": 3.3,
+   "carbs": 0,
+   "name": "Ikan selar kuning cue mentah"
+  },
+  {
+   "calories": 199,
+   "protein": 34.1,
+   "fat": 3.8,
+   "carbs": 7.1,
+   "name": "Ikan sunu asin mentah"
+  },
+  {
+   "calories": 358,
+   "protein": 20.7,
+   "fat": 26.4,
+   "carbs": 9.4,
+   "name": "Ikan telur asin mentah"
+  },
+  {
+   "calories": 316,
+   "protein": 60.1,
+   "fat": 6.5,
+   "carbs": 22.4,
+   "name": "Ikan tepung mentah"
+  },
+  {
+   "calories": 347,
+   "protein": 48.8,
+   "fat": 6.4,
+   "carbs": 19.6,
+   "name": "Ikan Teri tepung"
+  },
+  {
+   "calories": 496,
+   "protein": 30.3,
+   "fat": 33.5,
+   "carbs": 18.4,
+   "name": "Itik alabio daging dendeng mentah"
+  },
+  {
+   "calories": 366,
+   "protein": 9.8,
+   "fat": 7.3,
+   "carbs": 69.1,
+   "name": "Jagung kuning pipil kering mentah"
+  },
+  {
+   "calories": 355,
+   "protein": 9.2,
+   "fat": 3.9,
+   "carbs": 73.7,
+   "name": "Jagung kuning tepung"
+  },
+  {
+   "calories": 147,
+   "protein": 5.1,
+   "fat": 0.7,
+   "carbs": 31.5,
+   "name": "Jagung muda kuning mentah"
+  },
+  {
+   "calories": 350,
+   "protein": 6.2,
+   "fat": 1.4,
+   "carbs": 78.2,
+   "name": "Jampang huma mentah"
+  },
+  {
+   "calories": 393,
+   "protein": 38.9,
+   "fat": 13.3,
+   "carbs": 29.4,
+   "name": "Kerang asap mentah"
+  },
+  {
+   "calories": 357,
+   "protein": 41.1,
+   "fat": 10,
+   "carbs": 25.6,
+   "name": "Kerang dendeng mentah"
+  },
+  {
+   "calories": 325,
+   "protein": 1.8,
+   "fat": 0.4,
+   "carbs": 78.5,
+   "name": "Kerupuk kemplang (ikan) mentah"
+  },
+  {
+   "calories": 345,
+   "protein": 12,
+   "fat": 1.5,
+   "carbs": 71.5,
+   "name": "Kerupuk Melinjo mentah"
+  },
+  {
+   "calories": 341,
+   "protein": 0.3,
+   "fat": 0,
+   "carbs": 85,
+   "name": "Maizena tepung"
+  },
+  {
+   "calories": 322,
+   "protein": 55.8,
+   "fat": 2,
+   "carbs": 22.7,
+   "name": "Menjangan daging dendeng mentah"
+  },
+  {
+   "calories": 376,
+   "protein": 14.9,
+   "fat": 6,
+   "carbs": 65.7,
+   "name": "Oncom ampas kacang hijau"
+  },
+  {
+   "calories": 76,
+   "protein": 5.2,
+   "fat": 1.8,
+   "carbs": 10.6,
+   "name": "Pepea oncom ampas tahu"
+  },
+  {
+   "calories": 320,
+   "protein": 7.2,
+   "fat": 4.2,
+   "carbs": 63.3,
+   "name": "Rebung laut mentah"
+  },
+  {
+   "calories": 536,
+   "protein": 40.5,
+   "fat": 41.5,
+   "carbs": 0,
+   "name": "Rusa daging dendeng mentah"
+  },
+  {
+   "calories": 301,
+   "protein": 55,
+   "fat": 9,
+   "carbs": 0,
+   "name": "Sapi daging dendeng mentah"
+  },
+  {
+   "calories": 360,
+   "protein": 57.3,
+   "fat": 6,
+   "carbs": 19.2,
+   "name": "Sapi paru dendeng mentah"
+  },
+  {
+   "calories": 69,
+   "protein": 1,
+   "fat": 0.1,
+   "carbs": 15.7,
+   "name": "Suweg mentah"
+  },
+  {
+   "calories": 98,
+   "protein": 1.9,
+   "fat": 0.2,
+   "carbs": 23.7,
+   "name": "Tales mentah"
+  },
+  {
+   "calories": 201,
+   "protein": 20.8,
+   "fat": 8.8,
+   "carbs": 13.5,
+   "name": "Tempe kedelai murni mentah"
+  },
+  {
+   "calories": 355,
+   "protein": 0.7,
+   "fat": 0.2,
+   "carbs": 85.2,
+   "name": "Tepung Arrowroot"
+  },
+  {
+   "calories": 364,
+   "protein": 7,
+   "fat": 0.5,
+   "carbs": 80,
+   "name": "Tepung Beras"
+  },
+  {
+   "calories": 353,
+   "protein": 7,
+   "fat": 0.5,
+   "carbs": 80,
+   "name": "Tepung beras mentah"
+  },
+  {
+   "calories": 353,
+   "protein": 0.8,
+   "fat": 1.7,
+   "carbs": 83.6,
+   "name": "Tepung Ganyong"
+  },
+  {
+   "calories": 363,
+   "protein": 1.1,
+   "fat": 0.5,
+   "carbs": 88.2,
+   "name": "Tepung Gaplek"
+  },
+  {
+   "calories": 355,
+   "protein": 0.7,
+   "fat": 0.2,
+   "carbs": 85.2,
+   "name": "Tepung Garut (arrowroot)"
+  },
+  {
+   "calories": 364,
+   "protein": 4.5,
+   "fat": 1,
+   "carbs": 83.5,
+   "name": "Tepung Hunkwee"
+  },
+  {
+   "calories": 316,
+   "protein": 60.1,
+   "fat": 6.5,
+   "carbs": 22.4,
+   "name": "Tepung Ikan"
+  },
+  {
+   "calories": 355,
+   "protein": 9.2,
+   "fat": 3.9,
+   "carbs": 73.7,
+   "name": "Tepung Jagung Kuning"
+  },
+  {
+   "calories": 355,
+   "protein": 9.2,
+   "fat": 3.9,
+   "carbs": 73.7,
+   "name": "Tepung jagung putih"
+  },
+  {
+   "calories": 388,
+   "protein": 19,
+   "fat": 7.5,
+   "carbs": 61.2,
+   "name": "Tepung Jalejo"
+  },
+  {
+   "calories": 347,
+   "protein": 0.3,
+   "fat": 0.1,
+   "carbs": 85.6,
+   "name": "Tepung Kentang"
+  },
+  {
+   "calories": 350,
+   "protein": 1.2,
+   "fat": 0.6,
+   "carbs": 85,
+   "name": "Tepung Mocaf"
+  },
+  {
+   "calories": 338,
+   "protein": 2.9,
+   "fat": 0.4,
+   "carbs": 80.6,
+   "name": "Tepung Pisang"
+  },
+  {
+   "calories": 353,
+   "protein": 0.7,
+   "fat": 0.2,
+   "carbs": 84.7,
+   "name": "Tepung Sagu"
+  },
+  {
+   "calories": 326,
+   "protein": 4,
+   "fat": 0.4,
+   "carbs": 76.7,
+   "name": "Tepung Sente"
+  },
+  {
+   "calories": 363,
+   "protein": 1.1,
+   "fat": 0.5,
+   "carbs": 88.2,
+   "name": "Tepung singkong/ Tapioka"
+  },
+  {
+   "calories": 353,
+   "protein": 2.9,
+   "fat": 0.5,
+   "carbs": 84.4,
+   "name": "Tepung Sukun"
+  },
+  {
+   "calories": 509,
+   "protein": 24.6,
+   "fat": 30,
+   "carbs": 36.2,
+   "name": "Tepung Susu"
+  },
+  {
+   "calories": 418,
+   "protein": 19,
+   "fat": 9,
+   "carbs": 65.5,
+   "name": "Tepung Susu Asam untuk bayi"
+  },
+  {
+   "calories": 362,
+   "protein": 35.6,
+   "fat": 1,
+   "carbs": 52,
+   "name": "Tepung Susu Skim"
+  },
+  {
+   "calories": 332,
+   "protein": 5.7,
+   "fat": 0.6,
+   "carbs": 76.1,
+   "name": "Tepung Tales Beneng"
+  },
+  {
+   "calories": 365,
+   "protein": 8.9,
+   "fat": 1.3,
+   "carbs": 77.3,
+   "name": "Tepung Terigu"
+  },
+  {
+   "calories": 354,
+   "protein": 2.8,
+   "fat": 0.6,
+   "carbs": 84.4,
+   "name": "Tepung Ubi Ungu"
+  },
+  {
+   "calories": 462,
+   "protein": 39.1,
+   "fat": 32.4,
+   "carbs": 3.5,
+   "name": "Teripang dendeng mentah"
+  },
+  {
+   "calories": 278,
+   "protein": 62.6,
+   "fat": 4.1,
+   "carbs": 2.2,
+   "name": "Udang kering mentah"
+  },
+  {
+   "calories": 273,
+   "protein": 47.8,
+   "fat": 3.8,
+   "carbs": 12.5,
+   "name": "Udang papay mentah"
+  }
+ ],
+ "misleading": [
+  {
+   "calories": 352,
+   "protein": 17.4,
+   "fat": 1.3,
+   "carbs": 69,
+   "name": "Kopi bagian yang larut"
+  }
+ ],
+ "duplicate": [
+  {
+   "calories": 353,
+   "protein": 6.8,
+   "fat": 0.6,
+   "carbs": 80,
+   "name": "Beras parboiled",
+   "resolvedName": "Beras parboiled"
+  },
+  {
+   "calories": 225.7,
+   "protein": 3,
+   "fat": 0.3,
+   "carbs": 52.9,
+   "name": "Bika Ambon",
+   "resolvedName": "Bika Ambon"
+  },
+  {
+   "calories": 86,
+   "protein": 0.6,
+   "fat": 3.3,
+   "carbs": 14,
+   "name": "Mie basah",
+   "resolvedName": "Mie basah"
+  },
+  {
+   "calories": 180,
+   "protein": 3,
+   "fat": 0.3,
+   "carbs": 39.8,
+   "name": "Nasi",
+   "resolvedName": "Nasi Putih"
+  },
+  {
+   "calories": 350,
+   "protein": 24.5,
+   "fat": 26.6,
+   "carbs": 10.4,
+   "name": "Tempe kedelai murni goreng",
+   "resolvedName": "Tempe Goreng"
+  },
+  {
+   "calories": 174,
+   "protein": 30,
+   "fat": 3.5,
+   "carbs": 5.6,
+   "name": "Terasi merah",
+   "resolvedName": "Terasi merah"
+  }
+ ]
+}

@@ -21,7 +21,7 @@
 
 export const DATABASE_NAME = 'healthyhabit.db';
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 const V1 = `
 PRAGMA journal_mode = 'wal';
@@ -132,6 +132,75 @@ CREATE INDEX idx_step_logs_unsynced ON step_logs(synced_at) WHERE synced_at IS N
 `;
 
 /**
+ * V2 — katalog makanan dan ukuran sajinya.
+ *
+ * Gizi disimpan per 100 gram karena itu normalisasi yang dipakai TKPI maupun
+ * USDA; kalau data resmi masuk kemudian, tidak ada konversi yang diperlukan.
+ *
+ * `food_servings` yang memungkinkan porsi mengubah angka: TKPI mencatat gizi
+ * per 100 g, sementara pengguna mencatat "1 porsi". Tanpa berat per ukuran
+ * saji, kolom porsi hanya bisa jadi teks.
+ */
+const V2 = `
+CREATE TABLE foods (
+  id             TEXT PRIMARY KEY NOT NULL,
+  -- NULL = katalog bawaan (data referensi, tidak ikut sinkron per pengguna)
+  -- terisi = "makanan saya" milik pengguna
+  user_id        TEXT REFERENCES users(id) ON DELETE CASCADE,
+  name           TEXT NOT NULL,
+  name_search    TEXT NOT NULL,
+  category       TEXT,
+
+  -- gizi per 100 gram
+  calories       REAL NOT NULL DEFAULT 0,
+  protein_g      REAL NOT NULL DEFAULT 0,
+  carbs_g        REAL NOT NULL DEFAULT 0,
+  fat_g          REAL NOT NULL DEFAULT 0,
+  fiber_g        REAL,
+  sugar_g        REAL,
+  sodium_mg      REAL,
+  cholesterol_mg REAL,
+
+  -- 'estimasi' | 'tkpi-2017' | 'usda' | 'pengguna'
+  source         TEXT NOT NULL DEFAULT 'estimasi',
+  updated_at     TEXT NOT NULL,
+  synced_at      TEXT,
+  deleted_at     TEXT
+);
+
+CREATE TABLE food_servings (
+  id          TEXT PRIMARY KEY NOT NULL,
+  food_id     TEXT NOT NULL REFERENCES foods(id) ON DELETE CASCADE,
+  label       TEXT NOT NULL,
+  grams       REAL NOT NULL,
+  is_default  INTEGER NOT NULL DEFAULT 0,
+  updated_at  TEXT NOT NULL,
+  synced_at   TEXT,
+  deleted_at  TEXT
+);
+
+-- Catatan makanan boleh merujuk katalog, tapi salinan angkanya tetap tinggal
+-- di baris log. Sengaja TANPA foreign key: dengan cascade, merapikan katalog
+-- akan menghapus riwayat pengguna; tanpa cascade, katalog tidak bisa
+-- dirapikan sama sekali. Log harus bisa hidup lebih lama dari entri katalog.
+ALTER TABLE food_logs ADD COLUMN food_id       TEXT;
+ALTER TABLE food_logs ADD COLUMN serving_label TEXT;
+ALTER TABLE food_logs ADD COLUMN serving_grams REAL;
+ALTER TABLE food_logs ADD COLUMN quantity      REAL;
+
+-- Pencocokan nama persis, dipakai jalur peningkatan data (WHERE name_search = ?).
+-- Pencarian pengguna memakai LIKE '%kata%' yang tidak bisa memanfaatkan index
+-- ini — untuk ukuran katalog di bawah beberapa ribu baris, pemindaian tabel
+-- masih di bawah satu milidetik.
+CREATE INDEX idx_foods_search ON foods(name_search);
+CREATE INDEX idx_foods_user ON foods(user_id);
+CREATE INDEX idx_food_servings_parent ON food_servings(food_id);
+
+CREATE INDEX idx_foods_unsynced ON foods(synced_at) WHERE synced_at IS NULL;
+CREATE INDEX idx_food_servings_unsynced ON food_servings(synced_at) WHERE synced_at IS NULL;
+`;
+
+/**
  * Dijalankan lewat prop `onInit` milik SQLiteProvider, sebelum children render.
  * Versi schema dilacak dengan `PRAGMA user_version`.
  */
@@ -151,13 +220,17 @@ export async function migrate(db) {
 
   if (version >= SCHEMA_VERSION) return;
 
+  // Setiap langkah berjalan berurutan, sehingga database lama ikut naik
+  // versi tanpa perlu dipasang ulang.
   if (version === 0) {
     await db.execAsync(V1);
     version = 1;
   }
 
-  // Migrasi berikutnya menyusul di sini:
-  // if (version === 1) { await db.execAsync(V2); version = 2; }
+  if (version === 1) {
+    await db.execAsync(V2);
+    version = 2;
+  }
 
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }

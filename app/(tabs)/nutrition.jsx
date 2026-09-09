@@ -105,30 +105,25 @@ export default function NutritionScreen() {
           ) : (
             meals.map((meal) => (
               <View key={meal.slot} className="gap-3">
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-lg font-bold text-ink">
-                    {meal.label}{' '}
-                    <Text className="text-sm font-normal text-ink-muted">
-                      {formatNumber(meal.totals.calories)} kkal
-                    </Text>
+                <Text className="text-lg font-bold text-ink">
+                  {meal.label}{' '}
+                  <Text className="text-sm font-normal text-ink-muted">
+                    {formatNumber(meal.totals.calories)} kkal
                   </Text>
-
-                  <Pressable
-                    onPress={() => router.push('/nutrition/detail')}
-                    accessibilityRole="button"
-                    className="rounded-full bg-brand px-3 py-1.5 active:opacity-80"
-                  >
-                    <Text className="text-xs font-bold text-white">Details</Text>
-                  </Pressable>
-                </View>
+                </Text>
 
                 <Card className="overflow-hidden">
                   {meal.items.map((item, index) => (
                     <Pressable
                       key={item.id}
+                      onPress={() =>
+                        item.foodId
+                          ? router.push(`/nutrition/detail?food=${item.foodId}`)
+                          : undefined
+                      }
                       onLongPress={() => confirmDelete(item)}
                       accessibilityRole="button"
-                      accessibilityHint="Tekan lama untuk menghapus"
+                      accessibilityHint="Ketuk untuk detail, tekan lama untuk menghapus"
                       className={`flex-row items-center gap-3 p-4 active:bg-surface-sunken ${
                         index > 0 ? 'border-t border-line-soft' : ''
                       }`}
