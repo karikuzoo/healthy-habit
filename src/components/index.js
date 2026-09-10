@@ -1,6 +1,7 @@
 export { Button } from './Button';
 export { Card } from './Card';
 export { Chip } from './Chip';
+export { ExerciseMedia } from './ExerciseMedia';
 export { Field } from './Field';
 export { FoodForm } from './FoodForm';
 export { Loading } from './Loading';

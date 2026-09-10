@@ -40,7 +40,7 @@ export default function HomeDashboard() {
     caloriesConsumed: consumed.calories,
     calorieTarget: targetCalories,
     exercisesDone: workout.exercisesDone,
-    exercisesPlanned: todayWorkout.exercises.length,
+    exercisesPlanned: todayWorkout.plan.length,
   });
 
   const stepsProgress = STEPS.current / STEPS.target;

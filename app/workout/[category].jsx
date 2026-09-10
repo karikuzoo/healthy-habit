@@ -2,16 +2,21 @@ import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Card, Screen, ScreenHeader } from '../../src/components';
+import { Card, ExerciseMedia, Screen, ScreenHeader } from '../../src/components';
 import { colors } from '../../src/theme/colors';
-import { exerciseCategories, exercisesByCategory, formatSets } from '../../src/data/workout';
+import {
+  equipmentLabel,
+  exerciseCategories,
+  exercisesInCategory,
+  formatSets,
+} from '../../src/data/workout';
 
 export default function CategoryScreen() {
   const { category } = useLocalSearchParams();
 
   const title =
     exerciseCategories.find((item) => item.id === category)?.name ?? 'Kategori';
-  const exercises = exercisesByCategory[category] ?? [];
+  const exercises = exercisesInCategory(category);
 
   return (
     <Screen>
@@ -35,14 +40,19 @@ export default function CategoryScreen() {
                 className="active:opacity-80"
               >
                 <Card className="flex-row items-center gap-4 p-3">
-                  <View className="h-16 w-16 items-center justify-center rounded-xl bg-surface-sunken">
-                    <Ionicons name="barbell-outline" size={24} color={colors.ink.subtle} />
-                  </View>
+                  <ExerciseMedia exerciseId={exercise.id} size={64} />
                   <View className="flex-1">
                     <Text className="text-base font-bold text-ink">{exercise.name}</Text>
                     <Text className="mt-0.5 text-sm text-ink-muted">
                       {formatSets(exercise)}
                     </Text>
+
+                    {equipmentLabel(exercise) ? (
+                      <View className="mt-1 flex-row items-center gap-1">
+                        <Ionicons name="alert-circle-outline" size={11} color={colors.steps.DEFAULT} />
+                        <Text className="text-2xs text-steps">{equipmentLabel(exercise)}</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={colors.ink.subtle} />
                 </Card>

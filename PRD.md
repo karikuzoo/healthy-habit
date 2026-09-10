@@ -4,7 +4,7 @@
 > Healthy Habit. Status setiap requirement ditandai eksplisit agar dokumen ini
 > tidak berbeda dari kondisi kode.
 >
-> **Terakhir diperbarui:** 9 September 2026
+> **Terakhir diperbarui:** 11 September 2026
 > **Status produk:** pengembangan awal, belum dirilis
 
 **Legenda status:** ✅ selesai · 🚧 sebagian · ⬜ belum dikerjakan · ❓ perlu keputusan
@@ -181,7 +181,7 @@ dipastikan lebih dahulu.
 
 | ID | Requirement | Status |
 |---|---|---|
-| WO-1 | Rencana latihan harian dengan ringkasan (kalori, jumlah gerakan, istirahat) | ✅ |
+| WO-1 | Rencana latihan harian dengan ringkasan (kalori, jumlah gerakan, istirahat) | ✅ 7 gerakan, 28 menit, 184 kkal |
 | WO-2 | Jumlah gerakan diturunkan dari daftar, bukan angka terpisah | ✅ |
 | WO-3 | Katalog gerakan per kategori (Kaki, Dada, Punggung, Inti) | ✅ |
 | WO-4 | Sesi latihan dengan penghitung waktu (play/pause/reset, berbasis jam dinding) | ✅ |
@@ -190,7 +190,7 @@ dipastikan lebih dahulu.
 | WO-7 | Menyimpan sesi latihan ke database | ✅ satu sesi per hari, gerakan sebagai baris anak |
 | WO-8 | Menambahkan gerakan ke rencana hari ini | ⬜ hanya membuka katalog |
 | WO-9 | Riwayat latihan | 🚧 data tersimpan per hari; layar riwayat belum ada |
-| WO-10 | Gambar/animasi peraga gerakan | ⬜ belum ada aset |
+| WO-10 | Gambar peraga gerakan | ✅ seluruh 19 gerakan, 2 foto (awal & akhir) dari free-exercise-db |
 
 ### 3.6 Profil
 
@@ -467,14 +467,38 @@ Memakai skala Tailwind bawaan, ditambah ukuran khusus:
 - Target kalori & makro terhitung dari data tubuh
 - SQLite terpasang dengan schema siap-sinkron; profil sudah persisten
 
-### 8.2 Urutan pekerjaan berikutnya
+### 8.2 Roadmap
 
-1. ~~Pencatatan nutrisi ke SQLite~~ ✅
-2. ~~Pencatatan tidur ke SQLite~~ ✅
-3. ~~Pencatatan latihan ke SQLite~~ ✅
-4. ~~Rumus skor harian (HOME-2)~~ ✅
-5. **Auth Supabase + sinkronisasi Postgres** — membuka multi-perangkat
-6. **Notifikasi** untuk pengingat waktu tidur
+Lapisan data lokal sudah lengkap — nutrisi, tidur, dan latihan semuanya di
+SQLite, dan dashboard menghitung dari data nyata. Yang tersisa dikelompokkan
+menurut apa yang menghalanginya.
+
+**Butuh keputusan atau aset dari pemilik produk lebih dulu** ❓
+
+| Item | Penghalang |
+|---|---|
+| Auth & sinkronisasi (AUTH-2, AUTH-6, AUTH-9) | Perlu project Supabase; tidak bisa dibuat dari sisi pengembang |
+| Lisensi katalog makanan | Asal CSV belum terverifikasi; wajib dipastikan sebelum rilis komersial |
+| HOME-3 langkah kaki | Belum ada sumber data. Tanpa pedometer, harus input manual atau ditunda |
+| PROF-9 foto profil | Butuh image picker |
+| AUTH-10 tanggal lahir | Butuh dependensi date picker |
+
+**Bisa dikerjakan sekarang, berdampak besar**
+
+1. **Notifikasi pengingat tidur** (SLEEP-7) — sakelarnya sudah ada tapi belum
+   berbunyi; butuh `expo-notifications` dan izin notifikasi
+2. **Riwayat per tanggal** (NUT-10, WO-9) — datanya sudah tersimpan lengkap
+   dengan `logged_on`, yang belum hanya layarnya
+3. **Ubah catatan makanan** (NUT-8) — hapus sudah bisa, ubah belum
+
+**Perbaikan kecil**
+
+4. **HOME-1** sapaan mengikuti jam, bukan "Selamat pagi" tetap
+5. **HOME-5** kartu rekomendasi masih teks tetap
+6. **AUTH-5** centang syarat layanan belum memblokir tombol lanjut
+7. **PROF-7** ganti satuan baru mengubah label, angkanya belum dikonversi
+8. **WO-8** "Tambahkan gerakan" baru membuka katalog, belum menambah ke rencana
+9. **NUT-5** mikronutrien belum ada di dataset katalog
 
 ### 8.3 Utang teknis
 
