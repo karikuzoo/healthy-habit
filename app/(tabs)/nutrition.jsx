@@ -116,11 +116,7 @@ export default function NutritionScreen() {
                   {meal.items.map((item, index) => (
                     <Pressable
                       key={item.id}
-                      onPress={() =>
-                        item.foodId
-                          ? router.push(`/nutrition/detail?food=${item.foodId}`)
-                          : undefined
-                      }
+                      onPress={() => router.push(`/nutrition/detail?log=${item.id}`)}
                       onLongPress={() => confirmDelete(item)}
                       accessibilityRole="button"
                       accessibilityHint="Ketuk untuk detail, tekan lama untuk menghapus"

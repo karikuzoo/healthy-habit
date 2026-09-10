@@ -149,6 +149,81 @@ export async function insertFood(db, food, servings, userId = null) {
 }
 
 /**
+ * Memperbarui nilai gizi satu makanan.
+ *
+ * Entri katalog bawaan (`user_id IS NULL`) diubah DI TEMPAT, tidak disalin
+ * jadi milik pengguna. Alasannya: katalog itu data referensi yang disemai di
+ * perangkat ini, dan menyalinnya akan membuat dua entri bernama sama muncul
+ * di pencarian — yang asli (salah) dan salinannya (benar). Konsekuensinya,
+ * koreksi bersifat lokal per perangkat; itu diterima karena baris berlabel
+ * `user_id IS NULL` memang tidak ikut sinkronisasi.
+ *
+ * Sumbernya ditandai 'dikoreksi' supaya bisa dibedakan dari angka dataset
+ * asli maupun dari makanan yang dibuat pengguna sejak awal.
+ *
+ * Ukuran saji dibuat ulang HANYA kalau kategorinya berubah atau berat porsi
+ * diisi — ukuran saji mengikuti kategori, jadi mengubah kategori tanpa
+ * memperbarui ukurannya akan meninggalkan porsi yang tidak masuk akal.
+ */
+export async function updateFood(db, foodId, food, options = {}) {
+  const timestamp = nowIso();
+  const existing = await db.getFirstAsync('SELECT * FROM foods WHERE id = ?', [foodId]);
+  if (!existing) return null;
+
+  const isCatalog = existing.user_id == null;
+  const source = isCatalog ? 'dikoreksi' : (existing.source ?? 'pengguna');
+
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `UPDATE foods
+          SET name = ?, name_search = ?, category = ?,
+              calories = ?, protein_g = ?, carbs_g = ?, fat_g = ?,
+              fiber_g = ?, sugar_g = ?, sodium_mg = ?, cholesterol_mg = ?,
+              source = ?, updated_at = ?, synced_at = NULL
+        WHERE id = ?`,
+      [
+        food.name,
+        normalizeName(food.name),
+        food.category ?? existing.category,
+        food.calories ?? 0,
+        food.protein ?? 0,
+        food.carbs ?? 0,
+        food.fat ?? 0,
+        food.fiber ?? null,
+        food.sugar ?? null,
+        food.sodium ?? null,
+        food.cholesterol ?? null,
+        source,
+        timestamp,
+        foodId,
+      ],
+    );
+
+    if (options.servings) {
+      // Soft delete, bukan DELETE: catatan lama menyimpan salinan angkanya
+      // sendiri, tetapi penghapusan tetap harus bisa disinkronkan.
+      await db.runAsync(
+        `UPDATE food_servings
+            SET deleted_at = ?, updated_at = ?, synced_at = NULL
+          WHERE food_id = ? AND deleted_at IS NULL`,
+        [timestamp, timestamp, foodId],
+      );
+
+      for (const serving of options.servings) {
+        await db.runAsync(
+          `INSERT INTO food_servings
+             (id, food_id, label, grams, is_default, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [newId(), foodId, serving.label, serving.grams, serving.isDefault ? 1 : 0, timestamp],
+        );
+      }
+    }
+  });
+
+  return getFoodWithServings(db, foodId);
+}
+
+/**
  * Mencari satu entri katalog bawaan berdasarkan nama persis, beserta ukuran
  * sajinya. Dipakai penyemai data contoh dan jalur peningkatan data.
  *
@@ -183,9 +258,10 @@ export async function countCatalogFoods(db) {
  * beserta ukuran sajinya berarti ribuan INSERT, dan menyiapkan pernyataannya
  * sekali jauh lebih cepat daripada mengurai SQL yang sama berulang kali.
  *
- * Label sumber 'dataset-eksternal' dipakai apa adanya — asal data belum
- * terverifikasi, jadi menandainya 'tkpi-2017' akan mengaku-aku asal yang
- * tidak dapat dibuktikan.
+ * Label sumber diambil per entri dari katalog, bukan diseragamkan: mayoritas
+ * berlabel 'dataset-eksternal' (asalnya belum terverifikasi, jadi menandainya
+ * 'tkpi-2017' akan mengaku-aku asal yang tidak dapat dibuktikan), sementara
+ * baris yang angkanya dikoreksi manual berlabel 'estimasi'.
  */
 export async function seedCatalogIfEmpty(db) {
   if ((await countCatalogFoods(db)) > 0) return 0;
@@ -198,7 +274,7 @@ export async function seedCatalogIfEmpty(db) {
          (id, user_id, name, name_search, category,
           calories, protein_g, carbs_g, fat_g, source, updated_at)
        VALUES ($id, NULL, $name, $search, $category,
-               $calories, $protein, $carbs, $fat, 'dataset-eksternal', $ts)`,
+               $calories, $protein, $carbs, $fat, $source, $ts)`,
     );
     const insertServingStmt = await db.prepareAsync(
       `INSERT INTO food_servings (id, food_id, label, grams, is_default, updated_at)
@@ -218,6 +294,7 @@ export async function seedCatalogIfEmpty(db) {
           $protein: food.protein,
           $carbs: food.carbs,
           $fat: food.fat,
+          $source: food.source ?? 'dataset-eksternal',
           $ts: timestamp,
         });
 

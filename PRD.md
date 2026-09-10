@@ -138,6 +138,7 @@ pedometer/wearable, langkah harus diinput manual atau fitur ini ditunda.
 | NUT-9 | Pengaturan porsi mempengaruhi kalori & makro | ✅ ukuran saji & jumlah mengalikan angka |
 | NUT-10 | Riwayat nutrisi per tanggal | ⬜ |
 | NUT-11 | Menambahkan makanan sendiri ("makanan saya") | ✅ per 100 g, validasi fisik, ukuran saji kustom |
+| NUT-12 | Mengoreksi nilai gizi makanan di katalog | ✅ diubah di tempat, sumber jadi "dikoreksi"; catatan lama tidak berubah |
 
 **NUT-6 — sumber data** (ditetapkan 9 Sep 2026)
 
