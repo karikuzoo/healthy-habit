@@ -80,6 +80,31 @@ const RENAMES = {
 };
 
 /**
+ * Koreksi untuk baris yang angkanya jelas salah di data sumber.
+ *
+ * Pemeriksaan aritmetika 4/4/9 tidak bisa menangkap kasus seperti ini: baris
+ * bisa konsisten secara internal (kalori cocok dengan makronya) sekaligus
+ * salah secara gizi. Ketidakwajaran seperti itu hanya ketahuan dengan
+ * membandingkan terhadap makanan sejenis.
+ *
+ * Setiap koreksi WAJIB menyertakan alasannya, dan hasilnya ditandai
+ * `source: 'estimasi'` — bukan `'dataset-eksternal'` — karena angkanya
+ * perkiraan, bukan berasal dari dataset.
+ */
+const CORRECTIONS = {
+  'nasi uduk': {
+    calories: 200,
+    protein: 3.5,
+    carbs: 30,
+    fat: 7,
+    reason:
+      'Sumber menyebut lemak 21 g dan karbohidrat 11,7 g per 100 g. Setiap nasi ' +
+      'lain di dataset yang sama berkarbohidrat 19-80 g dan berlemak 0,3-8,8 g, ' +
+      'jadi angka itu tidak masuk akal untuk nasi bersantan.',
+  },
+};
+
+/**
  * Entri yang namanya menyesatkan kalau muncul di pencarian.
  *
  * "Teh" di data adalah daun kering 132 kkal per 100 g, bukan teh seduh —
@@ -114,8 +139,20 @@ const CATEGORIES = [
   [/\b(kerupuk|keripik|kue|biskuit|wafer|permen|dodol|martabak|donat|bakwan|gorengan|onde|klepon|wajik|jenang|bagea|bika|brem|getuk|lapis|lemper|nagasari|putu|serabi|apem|cucur|rengginang|emping|opak|pilus|kacang|coklat|cokelat|selai|madu|gula)\b/i, 'Camilan'],
 ];
 
+/**
+ * Menentukan kategori dari nama makanan.
+ *
+ * Kata PERTAMA dicoba lebih dulu, karena dalam bahasa Indonesia kata benda
+ * utamanya biasanya di depan. Tanpa ini "Ikan Teri Nasi kering" jatuh ke
+ * "Makanan pokok" gara-gara kata "Nasi" di tengah namanya — dan kategori
+ * menentukan ukuran saji, jadi salah kategori berarti salah porsi.
+ */
 function categorize(name) {
+  const firstWord = name.trim().split(/\s+/)[0] ?? '';
+
+  for (const [re, label] of CATEGORIES) if (re.test(firstWord)) return label;
   for (const [re, label] of CATEGORIES) if (re.test(name)) return label;
+
   return 'Lainnya';
 }
 
@@ -155,6 +192,7 @@ const body = rows.slice(1).filter((r) => r.length >= 6 && r[5]?.trim());
 
 const accepted = [];
 const review = { impossible: [], inconsistent: [], notAMeal: [], misleading: [], duplicate: [] };
+const corrected = [];
 const seen = new Set();
 
 for (const r of body) {
@@ -167,6 +205,20 @@ for (const r of body) {
   };
 
   const key = normalize(raw.name);
+
+  // Koreksi diterapkan SEBELUM validasi, supaya angka yang sudah dibetulkan
+  // ikut diperiksa seperti yang lain.
+  const correction = CORRECTIONS[key];
+  let source = 'dataset-eksternal';
+  if (correction) {
+    raw.calories = correction.calories;
+    raw.protein = correction.protein;
+    raw.carbs = correction.carbs;
+    raw.fat = correction.fat;
+    source = 'estimasi';
+    corrected.push({ name: raw.name, ...correction });
+  }
+
   const numbers = [raw.calories, raw.protein, raw.fat, raw.carbs];
 
   // Mustahil secara fisik — hampir selalu titik desimal tergeser
@@ -209,6 +261,7 @@ for (const r of body) {
     protein: raw.protein,
     carbs: raw.carbs,
     fat: raw.fat,
+    source,
   });
 }
 
@@ -236,6 +289,14 @@ console.log(`  kalori tak cocok: ${review.inconsistent.length}`);
 console.log(`  bukan makanan   : ${review.notAMeal.length}`);
 console.log(`  menyesatkan     : ${review.misleading.length}`);
 console.log(`  duplikat        : ${review.duplicate.length}`);
+if (corrected.length > 0) {
+  console.log(`\nDikoreksi manual  : ${corrected.length}`);
+  for (const item of corrected) {
+    console.log(`  ${item.name} -> ${item.calories} kkal, P${item.protein} K${item.carbs} L${item.fat}`);
+    console.log(`    alasan: ${item.reason}`);
+  }
+}
+
 console.log(`\nKatalog -> ${path.relative(ROOT, catalogPath)}`);
 console.log(`Perlu diperiksa -> ${path.relative(ROOT, reviewPath)}`);
 

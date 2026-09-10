@@ -17,6 +17,31 @@ import {
   logExerciseSession,
 } from "../../src/db/workoutLogs";
 import { useUser } from "../../src/context/UserContext";
+import React, { useCallback, useEffect, useState } from "react";
+import { Alert, Pressable, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
+import {
+  Button,
+  Card,
+  ExerciseMedia,
+  Screen,
+  ScreenHeader,
+} from "../../src/components";
+import { colors } from "../../src/theme/colors";
+import {
+  equipmentLabel,
+  estimateCalories,
+  formatSets,
+  planExercises,
+  resolveExercise,
+} from "../../src/data/workout";
+import {
+  getExerciseProgress,
+  logExerciseSession,
+} from "../../src/db/workoutLogs";
+import { useUser } from "../../src/context/UserContext";
 
 /** 95 -> "01:35" */
 function formatClock(totalSeconds) {
@@ -62,6 +87,11 @@ export default function SessionScreen() {
   const position = todayWorkout.exercises.findIndex(
     (item) => item.id === exercise.id,
   );
+  // Gerakan bisa datang dari rencana harian maupun katalog kategori, jadi
+  // dicari di katalog — bukan hanya di rencana.
+  const plan = planExercises();
+  const exercise = resolveExercise(exerciseId) ?? plan[0];
+  const position = plan.findIndex((item) => item.id === exercise.id);
 
   // Lanjutkan dari set yang sudah tercatat hari ini, bukan mulai dari nol
   useEffect(() => {
@@ -222,12 +252,38 @@ export default function SessionScreen() {
           </View>
         </View>
 
-        <Card className="items-center gap-2 p-6">
+        <Card className="items-center gap-3 p-6">
+          {/* Satu-satunya tempat peraga dianimasikan: di sini gerakannya
+              memang dipakai sebagai acuan bentuk. */}
+          <ExerciseMedia
+            exerciseId={exercise.id}
+            size={160}
+            animated
+            rounded="rounded-2xl"
+          />
+
           <Text className="text-2xl font-bold text-ink">{exercise.name}</Text>
           <Text className="text-base text-ink-muted">
             {formatSets(exercise)}
           </Text>
-          <Text className="mt-2 text-sm font-semibold text-brand">
+          <Text className="mt-2 text-sm font-semibold text-brand" />
+          <Text className="text-base text-ink-muted">
+            {formatSets(exercise)}
+          </Text>
+
+          {equipmentLabel(exercise) ? (
+            <View className="flex-row items-center gap-1.5 rounded-full bg-steps-soft px-3 py-1">
+              <Ionicons
+                name="alert-circle-outline"
+                size={13}
+                color={colors.steps.DEFAULT}
+              />
+              <Text className="text-xs font-semibold text-steps">
+                {equipmentLabel(exercise)}
+              </Text>
+            </View>
+          ) : null}
+          <Text className="text-sm font-semibold text-brand">
             {allSetsDone
               ? `${exercise.sets} dari ${exercise.sets} set selesai`
               : `Set ${completedSets + 1} dari ${exercise.sets}`}

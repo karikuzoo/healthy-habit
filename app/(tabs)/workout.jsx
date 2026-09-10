@@ -8,6 +8,21 @@ import { colors } from "../../src/theme/colors";
 import { formatSets, todayWorkout } from "../../src/data/workout";
 import { listTodayExercises, todaySummary } from "../../src/db/workoutLogs";
 import { useUser } from "../../src/context/UserContext";
+import React, { useCallback, useState } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { router, useFocusEffect } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
+import { Button, Card, ExerciseMedia, Screen } from "../../src/components";
+import { colors } from "../../src/theme/colors";
+import {
+  equipmentLabel,
+  formatSets,
+  planExercises,
+  todayWorkout,
+} from "../../src/data/workout";
+import { listTodayExercises, todaySummary } from "../../src/db/workoutLogs";
+import { useUser } from "../../src/context/UserContext";
 
 const EMPTY_SUMMARY = { durationMinutes: 0, calories: 0, exercisesDone: 0 };
 
@@ -27,7 +42,7 @@ export default function WorkoutScreen() {
   const [progress, setProgress] = useState(() => new Map());
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
 
-  const { exercises } = todayWorkout;
+  const exercises = planExercises();
 
   useFocusEffect(
     useCallback(() => {
@@ -117,6 +132,20 @@ export default function WorkoutScreen() {
                       }
                     />
                   </View>
+                  {/* Statis di daftar: gerakan tidak terbaca di 64px, dan
+                      menganimasikan delapan thumbnail sekaligus memboroskan
+                      baterai. Yang sudah selesai ditandai centang. */}
+                  {complete ? (
+                    <View className="h-16 w-16 items-center justify-center rounded-xl bg-brand-soft">
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={28}
+                        color={colors.brand.DEFAULT}
+                      />
+                    </View>
+                  ) : (
+                    <ExerciseMedia exerciseId={exercise.id} size={64} />
+                  )}
 
                   <View className="flex-1">
                     <Text className="text-2xs font-bold tracking-wider text-brand">
@@ -130,6 +159,20 @@ export default function WorkoutScreen() {
                         ? `${done.setsCompleted} dari ${exercise.sets} set selesai`
                         : formatSets(exercise)}
                     </Text>
+
+                    {/* Penanda alat: pengguna tanpa peralatan bisa melewatinya */}
+                    {equipmentLabel(exercise) ? (
+                      <View className="mt-1 flex-row items-center gap-1">
+                        <Ionicons
+                          name="alert-circle-outline"
+                          size={11}
+                          color={colors.steps.DEFAULT}
+                        />
+                        <Text className="text-2xs text-steps">
+                          {equipmentLabel(exercise)}
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
 
                   <Ionicons

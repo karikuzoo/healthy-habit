@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Card, Screen, ScreenHeader } from '../../src/components';
 import { colors } from '../../src/theme/colors';
-import { exerciseCategories, exercisesByCategory } from '../../src/data/workout';
+import { categoryCount, exerciseCategories } from '../../src/data/workout';
 
 /**
  * Pemilih kategori untuk tombol "Tambahkan gerakan".
@@ -35,7 +35,7 @@ export default function AddExerciseScreen() {
                 <View className="flex-1">
                   <Text className="text-base font-bold text-ink">{category.name}</Text>
                   <Text className="mt-0.5 text-sm text-ink-muted">
-                    {exercisesByCategory[category.id]?.length ?? 0} gerakan
+                    {categoryCount(category.id)} gerakan
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.ink.subtle} />

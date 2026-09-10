@@ -85,6 +85,38 @@ export async function listMealsForDay(db, userId, loggedOn = todayLocal()) {
 }
 
 /**
+ * Satu baris catatan makanan beserta salinan angkanya.
+ *
+ * Yang dikembalikan adalah apa yang BENAR-BENAR tercatat — bukan nilai
+ * katalog saat ini. Itu bedanya dengan `getFoodWithServings`, dan itulah yang
+ * harus ditampilkan saat pengguna membuka catatannya sendiri.
+ */
+export async function getFoodLog(db, foodLogId) {
+  const row = await db.getFirstAsync(
+    'SELECT * FROM food_logs WHERE id = ? AND deleted_at IS NULL',
+    [foodLogId],
+  );
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    foodId: row.food_id,
+    name: row.name,
+    portion: row.portion,
+    servingLabel: row.serving_label,
+    servingGrams: row.serving_grams,
+    quantity: row.quantity,
+    weightG: row.weight_g,
+    calories: row.calories,
+    protein: row.protein_g,
+    carbs: row.carbs_g,
+    fat: row.fat_g,
+    mealSlot: row.meal_slot,
+    loggedOn: row.logged_on,
+  };
+}
+
+/**
  * Menyimpan satu makanan ke log hari ini.
  *
  * Nama dan angka gizinya disalin ke baris log, bukan hanya dirujuk lewat

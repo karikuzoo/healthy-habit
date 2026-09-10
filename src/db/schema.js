@@ -161,7 +161,8 @@ CREATE TABLE foods (
   sodium_mg      REAL,
   cholesterol_mg REAL,
 
-  -- 'estimasi' | 'tkpi-2017' | 'usda' | 'pengguna'
+  -- 'estimasi' | 'tkpi-2017' | 'usda' | 'dataset-eksternal'
+  -- | 'pengguna' (dibuat pengguna) | 'dikoreksi' (entri katalog yang diubah pengguna)
   source         TEXT NOT NULL DEFAULT 'estimasi',
   updated_at     TEXT NOT NULL,
   synced_at      TEXT,
