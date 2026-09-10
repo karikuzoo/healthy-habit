@@ -1,17 +1,17 @@
-import React, { useCallback, useState } from 'react';
-import { ScrollView, Switch, Text, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
-import { Button, Card, ProgressRing, Screen } from '../../src/components';
-import { colors } from '../../src/theme/colors';
+import React, { useCallback, useState } from "react";
+import { ScrollView, Switch, Text, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
+import { Button, Card, ProgressRing, Screen } from "../../src/components";
+import { colors } from "../../src/theme/colors";
 import {
   bedtimeReminder,
   formatDurationEn,
   qualityLabelEn,
   sleepTargetMinutes,
-} from '../../src/data/sleep';
-import { getSleepForDay, weeklyTrend } from '../../src/db/sleepLogs';
-import { useUser } from '../../src/context/UserContext';
+} from "../../src/data/sleep";
+import { getSleepForDay, weeklyTrend } from "../../src/db/sleepLogs";
+import { useUser } from "../../src/context/UserContext";
 
 const CHART_HEIGHT = 96;
 
@@ -42,7 +42,7 @@ export default function SleepScreen() {
   return (
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="gap-5 px-5 pb-8 pt-2">
+        <View className="gap-5 px-5 pb-8 pt-8">
           <Text className="text-3xl font-bold text-ink">Sleep Tracker</Text>
 
           <Card className="items-center gap-4 p-6">
@@ -54,7 +54,7 @@ export default function SleepScreen() {
               trackColor={colors.line.DEFAULT}
             >
               <Text className="text-stat font-bold text-ink">
-                {lastNight ? formatDurationEn(durationMinutes) : '—'}
+                {lastNight ? formatDurationEn(durationMinutes) : "—"}
               </Text>
               <Text className="mt-1 text-2xs font-bold tracking-widest text-ink-muted">
                 ASLEEP TIME
@@ -86,10 +86,10 @@ export default function SleepScreen() {
                     <View
                       className={`w-3 rounded-full ${
                         night.minutes === 0
-                          ? 'bg-line-soft'
+                          ? "bg-line-soft"
                           : night.active
-                            ? 'bg-sleep'
-                            : 'bg-line'
+                            ? "bg-sleep"
+                            : "bg-line"
                       }`}
                       style={{
                         height: Math.max(
@@ -100,7 +100,7 @@ export default function SleepScreen() {
                     />
                     <Text
                       className={`text-xs ${
-                        night.active ? 'font-bold text-sleep' : 'text-ink-muted'
+                        night.active ? "font-bold text-sleep" : "text-ink-muted"
                       }`}
                     >
                       {night.day}
@@ -113,7 +113,9 @@ export default function SleepScreen() {
 
           <Card className="flex-row items-center justify-between p-5">
             <View className="flex-1 pr-3">
-              <Text className="text-base font-bold text-ink">Bedtime Reminder</Text>
+              <Text className="text-base font-bold text-ink">
+                Bedtime Reminder
+              </Text>
               <Text className="mt-0.5 text-sm text-ink-muted">
                 Ingatkan aku bersiap tidur pukul {bedtimeReminder}
               </Text>
@@ -121,14 +123,17 @@ export default function SleepScreen() {
             <Switch
               value={reminderEnabled}
               onValueChange={setReminderEnabled}
-              trackColor={{ false: colors.line.DEFAULT, true: colors.brand.DEFAULT }}
+              trackColor={{
+                false: colors.line.DEFAULT,
+                true: colors.brand.DEFAULT,
+              }}
               thumbColor={colors.surface.DEFAULT}
             />
           </Card>
 
           <Button
-            label={lastNight ? 'Ubah catatan tidur' : 'Catat tidur'}
-            onPress={() => router.push('/sleep/input')}
+            label={lastNight ? "Ubah catatan tidur" : "Catat tidur"}
+            onPress={() => router.push("/sleep/input")}
           />
         </View>
       </ScrollView>
