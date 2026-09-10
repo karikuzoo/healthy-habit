@@ -1,15 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
-import { useSQLiteContext } from "expo-sqlite";
-import { Button, Card, Screen } from "../../src/components";
-import { colors } from "../../src/theme/colors";
-import { formatSets, todayWorkout } from "../../src/data/workout";
-import { listTodayExercises, todaySummary } from "../../src/db/workoutLogs";
-import { useUser } from "../../src/context/UserContext";
-import React, { useCallback, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
@@ -21,7 +11,11 @@ import {
   planExercises,
   todayWorkout,
 } from "../../src/data/workout";
-import { listTodayExercises, todaySummary } from "../../src/db/workoutLogs";
+import {
+  deleteTodayExercise,
+  listTodayExercises,
+  todaySummary,
+} from "../../src/db/workoutLogs";
 import { useUser } from "../../src/context/UserContext";
 
 const EMPTY_SUMMARY = { durationMinutes: 0, calories: 0, exercisesDone: 0 };
@@ -42,7 +36,7 @@ export default function WorkoutScreen() {
   const [progress, setProgress] = useState(() => new Map());
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
 
-  const exercises = planExercises();
+  const [exercises, setExercises] = useState(() => planExercises());
 
   useFocusEffect(
     useCallback(() => {
@@ -56,6 +50,38 @@ export default function WorkoutScreen() {
     }, [db, user.id]),
   );
 
+  // Handler untuk konfirmasi dan menghapus gerakan
+  const handleDeleteExercise = (exercise) => {
+    Alert.alert(
+      "Hapus Gerakan?",
+      `Apakah kamu yakin ingin menghapus "${exercise.name}" dari latihan hari ini?`,
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            // 1. Hapus catatan dari DB
+            await deleteTodayExercise(db, user.id, exercise.id);
+
+            // 2. Hapus gerakan dari daftar tampilan (UI)
+            setExercises((prev) =>
+              prev.filter((item) => item.id !== exercise.id),
+            );
+
+            // 3. Refresh ringkasan
+            const [done, today] = await Promise.all([
+              listTodayExercises(db, user.id),
+              todaySummary(db, user.id),
+            ]);
+            setProgress(done);
+            setSummary(today);
+          },
+        },
+      ],
+    );
+  };
+
   const started = summary.exercisesDone > 0;
 
   return (
@@ -67,8 +93,7 @@ export default function WorkoutScreen() {
           {todayWorkout.intensity}
         </Text>
 
-        {/* Sebelum ada sesi, kotak ini menampilkan rencana; setelah mulai,
-            angka yang benar-benar tercatat hari ini. */}
+        {/* Ringkasan Latihan */}
         <View className="mt-5 rounded-card bg-brand p-4">
           <View className="flex-row items-center">
             <SummaryItem
@@ -110,31 +135,18 @@ export default function WorkoutScreen() {
             const complete = done && done.setsCompleted >= exercise.sets;
 
             return (
-              <Pressable
+              <Card
                 key={exercise.id}
-                onPress={() =>
-                  router.push(`/workout/session?exercise=${exercise.id}`)
-                }
-                accessibilityRole="button"
-                className="active:opacity-80"
+                className="flex-row items-center gap-3 p-3"
               >
-                <Card className="flex-row items-center gap-4 p-3">
-                  <View
-                    className={`h-16 w-16 items-center justify-center rounded-xl ${
-                      complete ? "bg-brand-soft" : "bg-surface-sunken"
-                    }`}
-                  >
-                    <Ionicons
-                      name={complete ? "checkmark-circle" : "barbell-outline"}
-                      size={complete ? 28 : 24}
-                      color={
-                        complete ? colors.brand.DEFAULT : colors.ink.subtle
-                      }
-                    />
-                  </View>
-                  {/* Statis di daftar: gerakan tidak terbaca di 64px, dan
-                      menganimasikan delapan thumbnail sekaligus memboroskan
-                      baterai. Yang sudah selesai ditandai centang. */}
+                {/* Area utama (klik untuk ke halaman Sesi) */}
+                <Pressable
+                  onPress={() =>
+                    router.push(`/workout/session?exercise=${exercise.id}`)
+                  }
+                  accessibilityRole="button"
+                  className="flex-1 flex-row items-center gap-3 active:opacity-80"
+                >
                   {complete ? (
                     <View className="h-16 w-16 items-center justify-center rounded-xl bg-brand-soft">
                       <Ionicons
@@ -144,7 +156,9 @@ export default function WorkoutScreen() {
                       />
                     </View>
                   ) : (
-                    <ExerciseMedia exerciseId={exercise.id} size={64} />
+                    <View className="h-16 w-16 overflow-hidden rounded-xl bg-brand-soft">
+                      <ExerciseMedia exerciseId={exercise.id} size={64} />
+                    </View>
                   )}
 
                   <View className="flex-1">
@@ -160,7 +174,6 @@ export default function WorkoutScreen() {
                         : formatSets(exercise)}
                     </Text>
 
-                    {/* Penanda alat: pengguna tanpa peralatan bisa melewatinya */}
                     {equipmentLabel(exercise) ? (
                       <View className="mt-1 flex-row items-center gap-1">
                         <Ionicons
@@ -174,14 +187,22 @@ export default function WorkoutScreen() {
                       </View>
                     ) : null}
                   </View>
+                </Pressable>
 
+                {/* Tombol Sampah untuk Menghapus */}
+                <Pressable
+                  onPress={() => handleDeleteExercise(exercise)}
+                  hitSlop={10}
+                  className="p-2 active:opacity-60"
+                  accessibilityLabel={`Hapus gerakan ${exercise.name}`}
+                >
                   <Ionicons
-                    name="chevron-forward"
+                    name="trash-outline"
                     size={20}
                     color={colors.ink.subtle}
                   />
-                </Card>
-              </Pressable>
+                </Pressable>
+              </Card>
             );
           })}
         </View>

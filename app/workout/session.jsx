@@ -2,23 +2,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
 import { Alert, Pressable, Text, View } from "react-native";
-import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
-import { useSQLiteContext } from "expo-sqlite";
-import { Button, Card, Screen, ScreenHeader } from "../../src/components";
-import { colors } from "../../src/theme/colors";
-import {
-  estimateCalories,
-  formatSets,
-  todayWorkout,
-} from "../../src/data/workout";
-import {
-  getExerciseProgress,
-  logExerciseSession,
-} from "../../src/db/workoutLogs";
-import { useUser } from "../../src/context/UserContext";
-import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
@@ -36,6 +19,7 @@ import {
   formatSets,
   planExercises,
   resolveExercise,
+  todayWorkout,
 } from "../../src/data/workout";
 import {
   getExerciseProgress,
@@ -82,17 +66,15 @@ export default function SessionScreen() {
   const running = startedAt !== null;
 
   const exercise =
-    todayWorkout.exercises.find((item) => item.id === exerciseId) ??
-    todayWorkout.exercises[0];
-  const position = todayWorkout.exercises.findIndex(
-    (item) => item.id === exercise.id,
+    resolveExercise(exerciseId) ??
+    planExercises()[0] ??
+    resolveExercise("bodyweight-squat");
+
+  const position = (todayWorkout.plan || []).findIndex(
+    (item) => item.id === exercise?.id,
   );
   // Gerakan bisa datang dari rencana harian maupun katalog kategori, jadi
   // dicari di katalog — bukan hanya di rencana.
-  const plan = planExercises();
-  const exercise = resolveExercise(exerciseId) ?? plan[0];
-  const position = plan.findIndex((item) => item.id === exercise.id);
-
   // Lanjutkan dari set yang sudah tercatat hari ini, bukan mulai dari nol
   useEffect(() => {
     let active = true;
@@ -267,9 +249,6 @@ export default function SessionScreen() {
             {formatSets(exercise)}
           </Text>
           <Text className="mt-2 text-sm font-semibold text-brand" />
-          <Text className="text-base text-ink-muted">
-            {formatSets(exercise)}
-          </Text>
 
           {equipmentLabel(exercise) ? (
             <View className="flex-row items-center gap-1.5 rounded-full bg-steps-soft px-3 py-1">

@@ -1,4 +1,4 @@
-import { newId, nowIso, todayLocal } from './helpers';
+import { newId, nowIso, todayLocal } from "./helpers";
 
 /**
  * Pencatatan latihan memakai dua tabel:
@@ -72,6 +72,27 @@ export async function todaySummary(db, userId, loggedOn = todayLocal()) {
   };
 }
 
+export async function deleteTodayExercise(
+  db,
+  userId,
+  exerciseId,
+  loggedOn = todayLocal(),
+) {
+  const timestamp = nowIso();
+
+  // Cari dulu sesi hari ini milik user
+  const session = await getTodaySession(db, userId, loggedOn);
+  if (!session) return;
+
+  // Set deleted_at pada gerakan terkait di dalam tabel workout_log_exercises
+  await db.runAsync(
+    `UPDATE workout_log_exercises
+        SET deleted_at = ?, updated_at = ?, synced_at = NULL
+      WHERE workout_log_id = ? AND exercise_id = ? AND deleted_at IS NULL`,
+    [timestamp, timestamp, session.id, exerciseId],
+  );
+}
+
 /**
  * Menyimpan hasil satu gerakan ke sesi hari ini.
  *
@@ -79,7 +100,12 @@ export async function todaySummary(db, userId, loggedOn = todayLocal()) {
  * `setsCompleted` diambil nilai terbesar antara yang lama dan yang baru —
  * supaya mengulang gerakan yang sama tidak pernah membuat progres mundur.
  */
-export async function logExerciseSession(db, userId, entry, loggedOn = todayLocal()) {
+export async function logExerciseSession(
+  db,
+  userId,
+  entry,
+  loggedOn = todayLocal(),
+) {
   const timestamp = nowIso();
 
   await db.withTransactionAsync(async () => {
@@ -94,7 +120,13 @@ export async function logExerciseSession(db, userId, entry, loggedOn = todayLoca
                 updated_at = ?,
                 synced_at = NULL
           WHERE id = ?`,
-        [timestamp, entry.durationSeconds, entry.calories, timestamp, session.id],
+        [
+          timestamp,
+          entry.durationSeconds,
+          entry.calories,
+          timestamp,
+          session.id,
+        ],
       );
     } else {
       const sessionId = newId();
@@ -127,7 +159,11 @@ export async function logExerciseSession(db, userId, entry, loggedOn = todayLoca
         `UPDATE workout_log_exercises
             SET sets_completed = ?, updated_at = ?, synced_at = NULL
           WHERE id = ?`,
-        [Math.max(existing.sets_completed, entry.setsCompleted), timestamp, existing.id],
+        [
+          Math.max(existing.sets_completed, entry.setsCompleted),
+          timestamp,
+          existing.id,
+        ],
       );
     } else {
       await db.runAsync(
@@ -151,7 +187,12 @@ export async function logExerciseSession(db, userId, entry, loggedOn = todayLoca
 }
 
 /** Jumlah set yang sudah tercatat untuk satu gerakan hari ini. */
-export async function getExerciseProgress(db, userId, exerciseId, loggedOn = todayLocal()) {
+export async function getExerciseProgress(
+  db,
+  userId,
+  exerciseId,
+  loggedOn = todayLocal(),
+) {
   const row = await db.getFirstAsync(
     `SELECT e.sets_completed
        FROM workout_log_exercises e
