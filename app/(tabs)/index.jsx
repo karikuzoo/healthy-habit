@@ -58,13 +58,13 @@ export default function HomeDashboard() {
   return (
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="gap-5 px-5 pb-8 pt-8">
+        <View className="gap-5 px-5 pb-8">
           {/* Sapaan */}
           <View className="flex-row items-center justify-between">
             <View>
               <Text className="text-base text-ink-muted">Selamat pagi,</Text>
               <Text className="text-2xl font-bold text-ink">
-                {user.firstName}a
+                {user.firstName}
               </Text>
             </View>
             <View className="h-12 w-12 items-center justify-center rounded-full bg-surface-sunken">

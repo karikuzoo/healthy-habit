@@ -62,7 +62,7 @@ export default function NutritionScreen() {
   return (
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="gap-5 px-5 pb-8 pt-8">
+        <View className="gap-5 px-5 pb-8">
           <View>
             <Text className="text-3xl font-bold text-ink">Nutrition</Text>
             <Text className="mt-1 text-sm text-ink-muted">

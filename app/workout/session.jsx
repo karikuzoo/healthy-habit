@@ -1,19 +1,28 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
-import { Button, Card, Screen, ScreenHeader } from '../../src/components';
-import { colors } from '../../src/theme/colors';
-import { estimateCalories, formatSets, todayWorkout } from '../../src/data/workout';
-import { getExerciseProgress, logExerciseSession } from '../../src/db/workoutLogs';
-import { useUser } from '../../src/context/UserContext';
+import React, { useCallback, useEffect, useState } from "react";
+import MaskedView from "@react-native-masked-view/masked-view";
+import { LinearGradient } from "expo-linear-gradient";
+import { Alert, Pressable, Text, View } from "react-native";
+import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
+import { Button, Card, Screen, ScreenHeader } from "../../src/components";
+import { colors } from "../../src/theme/colors";
+import {
+  estimateCalories,
+  formatSets,
+  todayWorkout,
+} from "../../src/data/workout";
+import {
+  getExerciseProgress,
+  logExerciseSession,
+} from "../../src/db/workoutLogs";
+import { useUser } from "../../src/context/UserContext";
 
 /** 95 -> "01:35" */
 function formatClock(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 export default function SessionScreen() {
@@ -48,8 +57,11 @@ export default function SessionScreen() {
   const running = startedAt !== null;
 
   const exercise =
-    todayWorkout.exercises.find((item) => item.id === exerciseId) ?? todayWorkout.exercises[0];
-  const position = todayWorkout.exercises.findIndex((item) => item.id === exercise.id);
+    todayWorkout.exercises.find((item) => item.id === exerciseId) ??
+    todayWorkout.exercises[0];
+  const position = todayWorkout.exercises.findIndex(
+    (item) => item.id === exercise.id,
+  );
 
   // Lanjutkan dari set yang sudah tercatat hari ini, bukan mulai dari nol
   useEffect(() => {
@@ -71,11 +83,14 @@ export default function SessionScreen() {
     return () => clearInterval(interval);
   }, [running]);
 
-  const elapsed = accumulated + (running ? Math.floor((now - startedAt) / 1000) : 0);
+  const elapsed =
+    accumulated + (running ? Math.floor((now - startedAt) / 1000) : 0);
 
   const toggle = useCallback(() => {
     if (running) {
-      setAccumulated((prev) => prev + Math.floor((Date.now() - startedAt) / 1000));
+      setAccumulated(
+        (prev) => prev + Math.floor((Date.now() - startedAt) / 1000),
+      );
       setStartedAt(null);
     } else {
       const timestamp = Date.now();
@@ -92,10 +107,14 @@ export default function SessionScreen() {
   const confirmReset = useCallback(() => {
     if (elapsed === 0) return;
 
-    Alert.alert('Reset waktu?', `Waktu ${formatClock(elapsed)} akan dikosongkan.`, [
-      { text: 'Batal', style: 'cancel' },
-      { text: 'Reset', style: 'destructive', onPress: reset },
-    ]);
+    Alert.alert(
+      "Reset waktu?",
+      `Waktu ${formatClock(elapsed)} akan dikosongkan.`,
+      [
+        { text: "Batal", style: "cancel" },
+        { text: "Reset", style: "destructive", onPress: reset },
+      ],
+    );
   }, [elapsed, reset]);
 
   const allSetsDone = completedSets >= exercise.sets;
@@ -144,18 +163,33 @@ export default function SessionScreen() {
 
       <View className="flex-1 justify-between px-5 pb-6">
         <View className="items-center pt-6">
-          <Text className="text-timer font-bold text-brand-dark">{formatClock(elapsed)}</Text>
+          <Text className="text-timer font-bold text-brand-dark">
+            {formatClock(elapsed)}
+          </Text>
 
           <View className="mt-1 flex-row items-center gap-2">
             <View
-              className={`h-2 w-2 rounded-full ${running ? 'bg-brand' : 'bg-ink-subtle'}`}
+              className={`h-2 w-2 rounded-full ${running ? "bg-brand" : "bg-ink-subtle"}`}
             />
             <Text className="text-sm text-ink-muted">
-              {running ? 'Berjalan' : elapsed > 0 ? 'Jeda' : 'Belum dimulai'}
+              {running ? "Berjalan" : elapsed > 0 ? "Jeda" : "Belum dimulai"}
             </Text>
           </View>
 
-          <Text className="mt-2 text-base text-ink-muted">🔥 {burned} kkal terbakar</Text>
+          <Text className="mt-2 text-base text-ink-muted">
+            <MaskedView
+              style={{ width: 24, height: 24 }}
+              maskElement={<Ionicons name="flame" size={22} color="black" />}
+            >
+              <LinearGradient
+                colors={["#FFD166", "#FF5722"]} // Gradasi dari kuning terang ke oranye api
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={{ flex: 1 }}
+              />
+            </MaskedView>
+            {burned} kkal terbakar
+          </Text>
 
           {/* Kontrol waktu */}
           <View className="mt-6 flex-row items-center gap-4">
@@ -165,7 +199,7 @@ export default function SessionScreen() {
               accessibilityRole="button"
               accessibilityLabel="Reset waktu"
               className={`h-14 w-14 items-center justify-center rounded-full border border-line bg-surface active:opacity-70 ${
-                elapsed === 0 ? 'opacity-40' : ''
+                elapsed === 0 ? "opacity-40" : ""
               }`}
             >
               <Ionicons name="refresh" size={24} color={colors.ink.muted} />
@@ -174,11 +208,11 @@ export default function SessionScreen() {
             <Pressable
               onPress={toggle}
               accessibilityRole="button"
-              accessibilityLabel={running ? 'Jeda waktu' : 'Mulai waktu'}
+              accessibilityLabel={running ? "Jeda waktu" : "Mulai waktu"}
               className="h-20 w-20 items-center justify-center rounded-full bg-brand active:opacity-80"
             >
               <Ionicons
-                name={running ? 'pause' : 'play'}
+                name={running ? "pause" : "play"}
                 size={32}
                 color={colors.surface.DEFAULT}
                 // Ikon play secara visual tidak seimbang di tengah lingkaran
@@ -190,7 +224,9 @@ export default function SessionScreen() {
 
         <Card className="items-center gap-2 p-6">
           <Text className="text-2xl font-bold text-ink">{exercise.name}</Text>
-          <Text className="text-base text-ink-muted">{formatSets(exercise)}</Text>
+          <Text className="text-base text-ink-muted">
+            {formatSets(exercise)}
+          </Text>
           <Text className="mt-2 text-sm font-semibold text-brand">
             {allSetsDone
               ? `${exercise.sets} dari ${exercise.sets} set selesai`
@@ -198,17 +234,19 @@ export default function SessionScreen() {
           </Text>
         </Card>
 
-        <View className="gap-3">
+        <View className="gap-3 pb-12">
           <Button
-            label={allSetsDone ? 'Semua set selesai' : 'Set Selesai'}
+            label={allSetsDone ? "Semua set selesai" : "Set Selesai"}
             variant="outline"
-            onPress={() => setCompletedSets((prev) => Math.min(prev + 1, exercise.sets))}
-            className={allSetsDone ? 'opacity-50' : ''}
+            onPress={() =>
+              setCompletedSets((prev) => Math.min(prev + 1, exercise.sets))
+            }
+            className={allSetsDone ? "opacity-50" : ""}
           />
           <Button
-            label={saving ? 'Menyimpan...' : 'Selesai Latihan'}
+            label={saving ? "Menyimpan..." : "Selesai Latihan"}
             onPress={handleFinish}
-            className={saving ? 'opacity-50' : ''}
+            className={saving ? "opacity-50" : ""}
           />
         </View>
       </View>

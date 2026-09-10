@@ -11,6 +11,7 @@ const WELCOME_IMAGES = [
   require("../assets/welcome/welcome-2.webp"),
   require("../assets/welcome/welcome-3.webp"),
   require("../assets/welcome/welcome-4.webp"),
+  require("../assets/welcome/welcome-5.webp"),
 ];
 
 // Jeda pergantian gambar, dalam milidetik. 3000 = 3 detik.

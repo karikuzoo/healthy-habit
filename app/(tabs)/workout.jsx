@@ -45,7 +45,7 @@ export default function WorkoutScreen() {
 
   return (
     <Screen>
-      <View className="px-5 pt-8">
+      <View className="px-5">
         <Text className="text-3xl font-bold text-ink">Workout</Text>
         <Text className="mt-1 text-sm text-ink-muted">
           {todayWorkout.level} • {todayWorkout.durationMinutes} menit •{" "}

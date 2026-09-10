@@ -42,7 +42,7 @@ export default function SleepScreen() {
   return (
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="gap-5 px-5 pb-8 pt-8">
+        <View className="gap-5 px-5 pb-8">
           <Text className="text-3xl font-bold text-ink">Sleep Tracker</Text>
 
           <Card className="items-center gap-4 p-6">
