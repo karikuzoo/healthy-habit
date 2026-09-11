@@ -93,18 +93,23 @@ kata sandi, aturan format email, rentang wajar tinggi/berat, batas usia minimum.
 |---|---|---|
 | HOME-1 | Sapaan sesuai waktu + nama depan pengguna | 🚧 teks "Selamat pagi" masih tetap |
 | HOME-2 | Skor harian 0–100 dengan ring progres | ✅ dihitung dari tidur/nutrisi/latihan |
-| HOME-3 | Kartu langkah: jumlah, target, persentase, sisa langkah | 🚧 angka masih contoh |
+| HOME-3 | Kartu langkah: jumlah, target, persentase, sisa langkah | ✅ pedometer perangkat, dengan input manual sebagai cadangan saat sensornya tidak bisa dipakai |
 | HOME-4 | Ringkasan tidur, kalori, dan durasi latihan hari ini | ✅ ketiganya dari database |
 | HOME-5 | Kartu rekomendasi harian | 🚧 teks masih tetap; kalimat skor sudah dinamis |
 
-**HOME-2 — rumus skor harian** (ditetapkan 9 Sep 2026, lihat `src/lib/dailyScore.js`)
+**HOME-2 — rumus skor harian** (ditetapkan 9 Sep 2026, bobot dirombak 12 Sep 2026, lihat `src/lib/dailyScore.js`)
 
 | Komponen | Bobot | Bentuk kurva |
 |---|---|---|
-| Tidur | 35% | Pita: penuh 7–9 jam, nol di ≤4 jam dan ≥12 jam |
-| Nutrisi | 35% | Proporsional sampai target, lalu turun ke nol di 150% target |
-| Latihan | 30% | Linear terhadap jumlah gerakan selesai |
-| Langkah | 0% | Dikeluarkan — belum ada sumber data |
+| Tidur | 30% | Pita: penuh 7–9 jam, nol di ≤4 jam dan ≥12 jam |
+| Nutrisi | 30% | Proporsional sampai target, lalu turun ke nol di 150% target |
+| Latihan | 25% | Linear terhadap jumlah gerakan selesai |
+| Langkah | 15% | Linear terhadap target harian (bawaan 8.000) |
+
+Langkah masuk sejak pedometer jadi sumber datanya, dan bobotnya sengaja yang
+terkecil: di Android angkanya selalu kurang dari kenyataan, jadi komponen
+inilah yang paling mungkin menghukum pengguna atas hal yang tidak mereka
+lakukan.
 
 Tidur dinilai dengan pita karena tidur adalah peristiwa yang sudah selesai
 saat dinilai; kekurangan tidak bisa "disusul". Kalori justru terakumulasi
@@ -120,8 +125,44 @@ tidur saja bisa memperoleh 100 padahal harinya belum berjalan.
 menghasilkan pesan positif — wajar pada siang hari, menyesatkan pada malam
 hari. Perlu keputusan ❓ apakah skor perlu sadar jam.
 
-**HOME-3 perlu keputusan** ❓ — sumber data langkah. Tanpa integrasi
-pedometer/wearable, langkah harus diinput manual atau fitur ini ditunda.
+**HOME-3 — sumber data langkah** (ditetapkan 12 Sep 2026)
+
+Memakai `Pedometer` dari `expo-sensors`, dengan dua jalur berbeda karena
+batas API-nya, bukan karena selera:
+
+| Platform | API | Akibatnya |
+|---|---|---|
+| iOS | `getStepCountAsync(tengah malam, sekarang)` | Total harian sebenarnya, termasuk saat aplikasi tertutup |
+| Android | `watchStepCount` saja | Menghitung sejak aplikasi pertama dibuka hari itu |
+
+`getStepCountAsync` **melempar `NotSupportedException` di Android** —
+terbaca langsung di `PedometerModule.kt` milik expo-sensors, bukan dugaan.
+Karena itu di Android pertambahan tiap sesi DIAKUMULASI ke `step_logs`
+(bukan ditimpa), supaya membuka aplikasi dua kali sehari tetap menyimpan
+kedua potongnya.
+
+Langkah selama aplikasi di background TETAP terhitung, berbeda dari yang
+disiratkan dokumentasi Expo: `TYPE_STEP_COUNTER` adalah pencacah perangkat
+keras, dan `SensorProxy.onHostResume()` mendaftar ulang tanpa mereset
+baseline. Yang benar-benar hilang hanya (1) langkah sebelum aplikasi pertama
+dibuka hari itu, dan (2) langkah selagi proses aplikasi mati.
+
+**Pedometer TIDAK JALAN di Expo Go pada Android** (diuji 12 Sep 2026).
+Modulnya memang ikut dibundel Expo Go, tetapi izin `ACTIVITY_RECOGNITION`
+tidak ada di manifest Expo Go — terkonfirmasi di layar izin aplikasi Expo Go,
+dan gejalanya `canAskAgain: false` sejak awal tanpa dialog pernah muncul.
+Menghitung langkah otomatis di Android menuntut **development build**.
+
+Karena itu ada cadangan: `app/steps/input.jsx` mencatat langkah secara
+manual, dan kartu di dashboard menawarkannya persis ketika sensornya tidak
+bisa dipakai — di Expo Go, atau di perangkat tanpa sensor. Keduanya menulis
+ke baris `step_logs` yang sama, jadi berpindah dari manual ke sensor tidak
+memerlukan migrasi.
+
+**Batasan yang diketahui:** kedua celah di atas membuat angka Android lebih
+kecil dari kenyataan, dan itu dikatakan apa adanya di kartu langkah. Jalan
+keluarnya [Health Connect](https://developer.android.com/health-and-fitness/guides/health-connect)
+— library di luar Expo, jadi pekerjaan tersendiri.
 
 ### 3.3 Nutrisi
 
@@ -134,7 +175,7 @@ pedometer/wearable, langkah harus diinput manual atau fitur ini ditunda.
 | NUT-5 | Layar detail makanan: makro, gizi mikro, dampak ke kebutuhan harian | 🚧 makro & dampak ✅; gizi mikro belum ada di dataset |
 | NUT-6 | Pencarian makanan | ✅ katalog 1.141 entri, pencarian tertunda 200 ms |
 | NUT-7 | Menyimpan catatan makanan ke database | ✅ |
-| NUT-8 | Mengubah & menghapus catatan makanan | 🚧 hapus via tekan-lama; ubah belum ada |
+| NUT-8 | Mengubah & menghapus catatan makanan | ✅ layar ubah: porsi, jumlah, waktu makan; hapus bertombol. Berlaku juga untuk hari lampau |
 | NUT-9 | Pengaturan porsi mempengaruhi kalori & makro | ✅ ukuran saji & jumlah mengalikan angka |
 | NUT-10 | Riwayat nutrisi per tanggal | ✅ daftar hari + rincian per tanggal, hanya-baca |
 | NUT-11 | Menambahkan makanan sendiri ("makanan saya") | ✅ per 100 g, validasi fisik, ukuran saji kustom |
@@ -491,8 +532,8 @@ Memakai skala Tailwind bawaan, ditambah ukuran khusus:
 
 ### 8.1 Sudah selesai
 
-- 23 rute, 17 komponen bersama, token desain tunggal
-- **40 dari 55 requirement fungsional selesai** (per 11 Sep 2026),
+- 25 rute, 17 komponen bersama, token desain tunggal
+- **42 dari 55 requirement fungsional selesai** (per 12 Sep 2026),
   di luar 10 NFR yang 6 di antaranya selesai
 - Target kalori & makro terhitung dari data tubuh
 - SQLite terpasang dengan schema siap-sinkron; profil sudah persisten
@@ -509,7 +550,6 @@ menurut apa yang menghalanginya.
 |---|---|
 | Auth & sinkronisasi (AUTH-2, AUTH-6, AUTH-9) | Perlu project Supabase; tidak bisa dibuat dari sisi pengembang |
 | Lisensi katalog makanan | Asal CSV belum terverifikasi; wajib dipastikan sebelum rilis komersial |
-| HOME-3 langkah kaki | Belum ada sumber data. Tanpa pedometer, harus input manual atau ditunda |
 | PROF-9 foto profil | Butuh image picker |
 | AUTH-10 tanggal lahir | Butuh dependensi date picker |
 
@@ -517,15 +557,14 @@ menurut apa yang menghalanginya.
 
 1. **Notifikasi pengingat tidur** (SLEEP-7) — sakelarnya sudah ada tapi belum
    berbunyi; butuh `expo-notifications` dan izin notifikasi
-2. **Ubah catatan makanan** (NUT-8) — hapus sudah bisa, ubah belum
 
 **Perbaikan kecil**
 
-3. **HOME-1** sapaan mengikuti jam, bukan "Selamat pagi" tetap
-4. **HOME-5** kartu rekomendasi masih teks tetap
-5. **AUTH-5** centang syarat layanan belum memblokir tombol lanjut
-6. **PROF-7** ganti satuan baru mengubah label, angkanya belum dikonversi
-7. **NUT-5** mikronutrien belum ada di dataset katalog
+2. **HOME-1** sapaan mengikuti jam, bukan "Selamat pagi" tetap
+3. **HOME-5** kartu rekomendasi masih teks tetap
+4. **AUTH-5** centang syarat layanan belum memblokir tombol lanjut
+5. **PROF-7** ganti satuan baru mengubah label, angkanya belum dikonversi
+6. **NUT-5** mikronutrien belum ada di dataset katalog
 
 ### 8.3 Utang teknis
 
@@ -537,6 +576,7 @@ menurut apa yang menghalanginya.
 | Data contoh | `seedDemoDayIfEmpty` & `seedDemoWeekIfEmpty` masih menyemai hari/minggu contoh pada peluncuran pertama; hapus bila tidak diperlukan lagi |
 | Judul bagian berbahasa Inggris | "Active Program", "Settings", "Weekly Trend" — perlu keputusan: terjemahkan atau pertahankan |
 | Konversi satuan | PROF-7 mengubah label saja, angka belum dikonversi |
+| Akurasi langkah di Android | Pedometer butuh development build (Expo Go tidak punya izinnya). Bahkan di dev build, langkah sebelum aplikasi pertama dibuka dan selagi prosesnya mati tidak terhitung — perlu Health Connect untuk menutupnya |
 | Tanpa uji otomatis | Verifikasi saat ini bersandar pada keberhasilan bundling |
 
 ---
@@ -556,5 +596,11 @@ menurut apa yang menghalanginya.
 | 11 Sep 2026 | 48 gerakan free-exercise-db dikurasi manual, fokus bodyweight | "Populer" tidak ada di dataset; penyaringan otomatis melewatkan Bench Press & Plank |
 | 11 Sep 2026 | Kategori Bahu tetap ada meski memakai dumbbell, kebutuhan alat ditandai di UI | Dataset tidak punya gerakan bahu bodyweight; menghapus kategori lebih merugikan |
 | 11 Sep 2026 | Rencana latihan harian pindah dari konstanta ke tabel `workout_plan_exercises` | Tanpa tempat menyimpan, "Tambahkan gerakan" hanya bisa membuka sesi; rencana pun cuma bisa menyusut |
-| 11 Sep 2026 | Layar riwayat hanya-baca, dan hari tanpa catatan tidak ditampilkan | Daftar ini riwayat, bukan kalender — baris kosong memanjangkan tanpa menambah informasi |
+| 11 Sep 2026 | Hari tanpa catatan tidak ditampilkan di riwayat | Daftar ini riwayat, bukan kalender — baris kosong memanjangkan tanpa menambah informasi |
+| 11 Sep 2026 | Riwayat tidak bisa menambah catatan, tapi boleh mengubah yang sudah ada | Mencatat selalu untuk hari ini; sebaliknya, salah catat kemarin baru ketahuan hari ini |
+| 11 Sep 2026 | Mengubah porsi MENSKALAKAN angka tersimpan, bukan menghitung ulang dari katalog | Konsisten dengan alasan kolom gizi disalin ke log: koreksi katalog tidak boleh menulis ulang riwayat |
 | 11 Sep 2026 | Riwayat nutrisi dibandingkan dengan target kalori HARI INI | Profil tidak menyimpan riwayat berat badan atau program, jadi target masa lalu tidak bisa dihitung ulang |
+| 12 Sep 2026 | Langkah memakai pedometer `expo-sensors`, bukan input manual | Dipilih pemilik produk setelah batas Android dipaparkan; input manual tiap hari dinilai tidak akan dipakai |
+| 12 Sep 2026 | Di Android langkah DIAKUMULASI per sesi, bukan ditimpa, dan langganan sensor tidak dibuat ulang | `getStepCountAsync` tidak ada di Android; menimpa akan menghapus sesi sebelumnya, dan tiap langganan baru mereset baseline sensor |
+| 12 Sep 2026 | Bobot skor dirombak jadi 30/30/25/15 | Langkah punya data nyata sekarang; bobotnya terkecil karena angkanya paling tidak akurat di Android |
+| 12 Sep 2026 | Input langkah manual disediakan sebagai cadangan pedometer | Expo Go Android tidak punya izin `ACTIVITY_RECOGNITION`; tanpa cadangan, fitur ini mati di lingkungan pengembangan yang dipakai sehari-hari |
