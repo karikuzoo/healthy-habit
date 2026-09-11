@@ -29,6 +29,43 @@ export async function dailyTotals(db, userId, loggedOn = todayLocal()) {
   };
 }
 
+/**
+ * Ringkasan gizi per tanggal, hari terbaru lebih dulu.
+ *
+ * Diagregasi oleh SQLite di atas index (user_id, logged_on), bukan dengan
+ * memuat seluruh catatan lalu mengelompokkannya di JS — riwayat tumbuh terus,
+ * sementara yang dibutuhkan daftar ini hanya satu baris per hari.
+ *
+ * Hari tanpa catatan sama sekali TIDAK muncul, dan itu disengaja: daftar ini
+ * riwayat, bukan kalender. Baris kosong hanya akan memanjangkan daftarnya
+ * tanpa menambah informasi.
+ */
+export async function dailyHistory(db, userId, limit = 60) {
+  const rows = await db.getAllAsync(
+    `SELECT logged_on,
+            COALESCE(SUM(calories), 0)  AS calories,
+            COALESCE(SUM(protein_g), 0) AS protein,
+            COALESCE(SUM(carbs_g), 0)   AS carbs,
+            COALESCE(SUM(fat_g), 0)     AS fat,
+            COUNT(*)                    AS items
+       FROM food_logs
+      WHERE user_id = ? AND deleted_at IS NULL
+      GROUP BY logged_on
+      ORDER BY logged_on DESC
+      LIMIT ?`,
+    [userId, limit],
+  );
+
+  return rows.map((row) => ({
+    loggedOn: row.logged_on,
+    calories: Math.round(row.calories),
+    protein: Math.round(row.protein),
+    carbs: Math.round(row.carbs),
+    fat: Math.round(row.fat),
+    items: row.items,
+  }));
+}
+
 /** Baris DB -> bentuk item makanan yang dipakai UI. */
 function toItem(row) {
   return {

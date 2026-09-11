@@ -45,7 +45,7 @@ export async function listTodayExercises(db, userId, loggedOn = todayLocal()) {
 }
 
 /** Ringkasan sesi hari ini untuk dashboard dan tab Workout. */
-export async function todaySummary(db, userId, loggedOn = todayLocal()) {
+export async function daySummary(db, userId, loggedOn = todayLocal()) {
   const row = await db.getFirstAsync(
     `SELECT COALESCE(SUM(w.duration_seconds), 0) AS duration_seconds,
             COALESCE(SUM(w.calories), 0)         AS calories
@@ -70,6 +70,79 @@ export async function todaySummary(db, userId, loggedOn = todayLocal()) {
     calories: Math.round(row.calories),
     exercisesDone: total,
   };
+}
+
+/**
+ * Ringkasan latihan per tanggal, hari terbaru lebih dulu.
+ *
+ * "Gerakan selesai" dihitung dengan definisi yang SAMA seperti
+ * `daySummary` — baris dengan `sets_completed > 0`. Kalau kedua layar
+ * memakai definisi berbeda, hari yang sama akan menyebut angka berbeda di
+ * ringkasan hari ini dan di riwayat.
+ *
+ * Jumlah gerakan diambil lewat subquery, bukan JOIN, karena menggabungkan
+ * baris anak lebih dulu akan menggandakan `duration_seconds` dan
+ * `calories` sebanyak jumlah gerakannya saat dijumlahkan.
+ */
+export async function sessionHistory(db, userId, limit = 60) {
+  const rows = await db.getAllAsync(
+    `SELECT w.logged_on,
+            COALESCE(SUM(w.duration_seconds), 0) AS duration_seconds,
+            COALESCE(SUM(w.calories), 0)         AS calories,
+            (SELECT COUNT(*)
+               FROM workout_log_exercises e
+               JOIN workout_logs x ON x.id = e.workout_log_id
+              WHERE x.user_id = w.user_id AND x.logged_on = w.logged_on
+                AND x.deleted_at IS NULL AND e.deleted_at IS NULL
+                AND e.sets_completed > 0) AS exercises_done
+       FROM workout_logs w
+      WHERE w.user_id = ? AND w.deleted_at IS NULL
+      GROUP BY w.logged_on
+      ORDER BY w.logged_on DESC
+      LIMIT ?`,
+    [userId, limit],
+  );
+
+  return rows
+    .map((row) => ({
+      loggedOn: row.logged_on,
+      durationSeconds: Math.round(row.duration_seconds),
+      durationMinutes: Math.round(row.duration_seconds / 60),
+      calories: Math.round(row.calories),
+      exercisesDone: row.exercises_done,
+    }))
+    // Sesi yang seluruh gerakannya sudah dihapus menyisakan baris induk
+    // kosong; itu bukan hari latihan dan tidak perlu muncul di riwayat.
+    .filter((day) => day.exercisesDone > 0);
+}
+
+/**
+ * Gerakan yang tercatat pada satu tanggal, urut sesuai posisinya di rencana.
+ *
+ * Berbeda dari `listTodayExercises` yang hanya memetakan jumlah set: layar
+ * riwayat perlu NAMA gerakannya juga, dan nama itu diambil dari baris log —
+ * bukan dari katalog. Catatan latihan harus tetap terbaca meski gerakannya
+ * kelak dihapus dari katalog.
+ */
+export async function listExercisesForDay(db, userId, loggedOn = todayLocal()) {
+  const rows = await db.getAllAsync(
+    `SELECT e.exercise_id, e.name, e.sets_planned, e.sets_completed, e.reps
+       FROM workout_log_exercises e
+       JOIN workout_logs w ON w.id = e.workout_log_id
+      WHERE w.user_id = ? AND w.logged_on = ?
+        AND w.deleted_at IS NULL AND e.deleted_at IS NULL
+        AND e.sets_completed > 0
+      ORDER BY e.position ASC`,
+    [userId, loggedOn],
+  );
+
+  return rows.map((row) => ({
+    exerciseId: row.exercise_id,
+    name: row.name,
+    setsPlanned: row.sets_planned,
+    setsCompleted: row.sets_completed,
+    reps: row.reps,
+  }));
 }
 
 export async function deleteTodayExercise(

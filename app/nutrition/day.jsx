@@ -1,101 +1,98 @@
-import React, { useCallback, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
-import { useSQLiteContext } from "expo-sqlite";
-import { Button, Card, ProgressBar, Screen } from "../../src/components";
-import { colors } from "../../src/theme/colors";
+import React, { useCallback, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import {
-  dailyTotals,
-  listMealsForDay,
-  softDeleteFoodLog,
-} from "../../src/db/foodLogs";
-import { formatNumber } from "../../src/lib/format";
-import { useUser } from "../../src/context/UserContext";
+  Card,
+  Loading,
+  ProgressBar,
+  Screen,
+  ScreenHeader,
+} from '../../src/components';
+import { colors } from '../../src/theme/colors';
+import { dailyTotals, listMealsForDay } from '../../src/db/foodLogs';
+import { fullDayLabel } from '../../src/lib/dates';
+import { formatNumber } from '../../src/lib/format';
+import { useUser } from '../../src/context/UserContext';
 
 const MACRO_COLUMNS = [
-  { key: "protein", label: "PROTEIN", color: colors.macro.protein },
-  { key: "carbs", label: "CARBS", color: colors.macro.carbs },
-  { key: "fat", label: "FAT", color: colors.macro.fat },
+  { key: 'protein', label: 'PROTEIN', color: colors.macro.protein },
+  { key: 'carbs', label: 'CARBS', color: colors.macro.carbs },
+  { key: 'fat', label: 'FAT', color: colors.macro.fat },
 ];
 
 const EMPTY_TOTALS = { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
-export default function NutritionScreen() {
+/**
+ * Catatan makanan satu tanggal.
+ *
+ * Sengaja hanya membaca, tanpa tombol tambah atau hapus. Mengubah catatan
+ * lama punya konsekuensi sendiri (NUT-8) dan layar ini bukan tempatnya —
+ * di sini pengguna sedang melihat ke belakang, bukan mencatat.
+ *
+ * `listMealsForDay` dan `dailyTotals` sudah menerima tanggal sejak awal, jadi
+ * tidak ada query baru yang perlu ditulis untuk layar ini.
+ */
+export default function NutritionDayScreen() {
   const db = useSQLiteContext();
   const { user, targetCalories, macroTargets } = useUser();
+  const { date } = useLocalSearchParams();
 
-  const [meals, setMeals] = useState([]);
+  const [meals, setMeals] = useState(null);
   const [consumed, setConsumed] = useState(EMPTY_TOTALS);
 
-  const load = useCallback(async () => {
-    const [mealRows, totals] = await Promise.all([
-      listMealsForDay(db, user.id),
-      dailyTotals(db, user.id),
-    ]);
-    setMeals(mealRows);
-    setConsumed(totals);
-  }, [db, user.id]);
-
-  // Muat ulang setiap layar difokuskan, supaya makanan yang baru ditambahkan
-  // dari layar lain langsung terlihat.
   useFocusEffect(
     useCallback(() => {
-      load();
-    }, [load]),
+      if (!date) return;
+
+      Promise.all([
+        listMealsForDay(db, user.id, date),
+        dailyTotals(db, user.id, date),
+      ]).then(([mealRows, totals]) => {
+        setMeals(mealRows);
+        setConsumed(totals);
+      });
+    }, [db, user.id, date]),
   );
 
-  const confirmDelete = (item) => {
-    Alert.alert("Hapus makanan ini?", item.name, [
-      { text: "Batal", style: "cancel" },
-      {
-        text: "Hapus",
-        style: "destructive",
-        onPress: async () => {
-          await softDeleteFoodLog(db, item.id);
-          load();
-        },
-      },
-    ]);
-  };
+  if (!date) {
+    return (
+      <Screen>
+        <ScreenHeader title="Catatan harian" />
+        <View className="items-center gap-2 px-5 pt-10">
+          <Ionicons name="calendar-outline" size={28} color={colors.ink.subtle} />
+          <Text className="text-sm text-ink-muted">Tanggal tidak ditemukan.</Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (!meals) {
+    return (
+      <Screen>
+        <ScreenHeader title="Catatan harian" />
+        <Loading />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
+      <ScreenHeader title="Catatan harian" />
+
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="gap-5 px-5 pb-8">
-          <View className="flex-row items-start justify-between">
-            <View className="flex-1">
-              <Text className="text-3xl font-bold text-ink">Nutrition</Text>
-              <Text className="mt-1 text-sm text-ink-muted">
-                Catat asupan agar target nutrisimu tetap seimbang.
-              </Text>
-            </View>
+        <View className="gap-5 px-5 pb-8 pt-1">
+          <Text className="text-sm text-ink-muted">{fullDayLabel(date)}</Text>
 
-            <Pressable
-              onPress={() => router.push("/nutrition/history")}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Riwayat nutrisi"
-              className="flex-row items-center gap-1.5 rounded-full bg-brand-soft px-3 py-2 active:opacity-70"
-            >
-              <Ionicons
-                name="time-outline"
-                size={16}
-                color={colors.brand.DEFAULT}
-              />
-              <Text className="text-xs font-bold text-brand-dark">Riwayat</Text>
-            </Pressable>
-          </View>
-
-          {/* Total dijumlahkan oleh SQLite, bukan dihitung ulang di JS */}
           <Card className="p-5">
             <View className="mb-3 flex-row items-center justify-between">
               <Text className="text-sm font-semibold text-ink-muted">
-                Daily Consumed
+                Total hari itu
               </Text>
               <Text className="text-base font-bold text-ink">
-                {formatNumber(consumed.calories)} /{" "}
-                {formatNumber(targetCalories)} kkal
+                {formatNumber(consumed.calories)} / {formatNumber(targetCalories)}{' '}
+                kkal
               </Text>
             </View>
 
@@ -130,14 +127,14 @@ export default function NutritionScreen() {
                 color={colors.ink.subtle}
               />
               <Text className="text-sm text-ink-muted">
-                Belum ada catatan makanan hari ini.
+                Tidak ada catatan makanan pada tanggal ini.
               </Text>
             </Card>
           ) : (
             meals.map((meal) => (
               <View key={meal.slot} className="gap-3">
                 <Text className="text-lg font-bold text-ink">
-                  {meal.label}{" "}
+                  {meal.label}{' '}
                   <Text className="text-sm font-normal text-ink-muted">
                     {formatNumber(meal.totals.calories)} kkal
                   </Text>
@@ -147,12 +144,12 @@ export default function NutritionScreen() {
                   {meal.items.map((item, index) => (
                     <Pressable
                       key={item.id}
-                      onPress={() => router.push(`/nutrition/detail?log=${item.id}`)}
-                      onLongPress={() => confirmDelete(item)}
+                      onPress={() =>
+                        router.push(`/nutrition/detail?log=${item.id}`)
+                      }
                       accessibilityRole="button"
-                      accessibilityHint="Ketuk untuk detail, tekan lama untuk menghapus"
                       className={`flex-row items-center gap-3 p-4 active:bg-surface-sunken ${
-                        index > 0 ? "border-t border-line-soft" : ""
+                        index > 0 ? 'border-t border-line-soft' : ''
                       }`}
                     >
                       <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-sunken">
@@ -179,11 +176,6 @@ export default function NutritionScreen() {
               </View>
             ))
           )}
-
-          <Button
-            label="Tambahkan makanan"
-            onPress={() => router.push("/nutrition/add-food")}
-          />
         </View>
       </ScrollView>
     </Screen>

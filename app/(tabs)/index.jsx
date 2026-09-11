@@ -15,7 +15,7 @@ import { useUser } from "../../src/context/UserContext";
 import { formatDuration } from "../../src/data/sleep";
 import { getSleepForDay } from "../../src/db/sleepLogs";
 import { dailyTotals } from "../../src/db/foodLogs";
-import { todaySummary } from "../../src/db/workoutLogs";
+import { daySummary } from "../../src/db/workoutLogs";
 import { getTodayPlan } from "../../src/db/workoutPlan";
 import { calculateDailyScore } from "../../src/lib/dailyScore";
 import { formatNumber } from "../../src/lib/format";
@@ -44,7 +44,7 @@ export default function HomeDashboard() {
       getSleepForDay(db, user.id).then((row) =>
         setSleepMinutes(row?.durationMinutes ?? null),
       );
-      todaySummary(db, user.id).then(setWorkout);
+      daySummary(db, user.id).then(setWorkout);
       getTodayPlan(db, user.id).then((plan) =>
         setExercisesPlanned(plan.length),
       );

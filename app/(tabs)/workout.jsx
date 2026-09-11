@@ -13,9 +13,9 @@ import {
   todayWorkout,
 } from "../../src/data/workout";
 import {
+  daySummary,
   deleteTodayExercise,
   listTodayExercises,
-  todaySummary,
 } from "../../src/db/workoutLogs";
 import { getTodayPlan, removePlanExercise } from "../../src/db/workoutPlan";
 import { useUser } from "../../src/context/UserContext";
@@ -53,7 +53,7 @@ export default function WorkoutScreen() {
     const [plan, done, today] = await Promise.all([
       getTodayPlan(db, user.id),
       listTodayExercises(db, user.id),
-      todaySummary(db, user.id),
+      daySummary(db, user.id),
     ]);
 
     setExercises(resolvePlan(plan));
@@ -97,11 +97,30 @@ export default function WorkoutScreen() {
   return (
     <Screen>
       <View className="px-5">
-        <Text className="text-3xl font-bold text-ink">Workout</Text>
-        <Text className="mt-1 text-sm text-ink-muted">
-          {todayWorkout.level} • {estimate.durationMinutes} menit •{" "}
-          {todayWorkout.intensity}
-        </Text>
+        <View className="flex-row items-start justify-between">
+          <View className="flex-1">
+            <Text className="text-3xl font-bold text-ink">Workout</Text>
+            <Text className="mt-1 text-sm text-ink-muted">
+              {todayWorkout.level} • {estimate.durationMinutes} menit •{" "}
+              {todayWorkout.intensity}
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => router.push("/workout/history")}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Riwayat latihan"
+            className="flex-row items-center gap-1.5 rounded-full bg-brand-soft px-3 py-2 active:opacity-70"
+          >
+            <Ionicons
+              name="time-outline"
+              size={16}
+              color={colors.brand.DEFAULT}
+            />
+            <Text className="text-xs font-bold text-brand-dark">Riwayat</Text>
+          </Pressable>
+        </View>
 
         {/* Ringkasan Latihan */}
         <View className="mt-5 rounded-card bg-brand p-4">

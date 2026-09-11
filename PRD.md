@@ -136,7 +136,7 @@ pedometer/wearable, langkah harus diinput manual atau fitur ini ditunda.
 | NUT-7 | Menyimpan catatan makanan ke database | ✅ |
 | NUT-8 | Mengubah & menghapus catatan makanan | 🚧 hapus via tekan-lama; ubah belum ada |
 | NUT-9 | Pengaturan porsi mempengaruhi kalori & makro | ✅ ukuran saji & jumlah mengalikan angka |
-| NUT-10 | Riwayat nutrisi per tanggal | ⬜ |
+| NUT-10 | Riwayat nutrisi per tanggal | ✅ daftar hari + rincian per tanggal, hanya-baca |
 | NUT-11 | Menambahkan makanan sendiri ("makanan saya") | ✅ per 100 g, validasi fisik, ukuran saji kustom |
 | NUT-12 | Mengoreksi nilai gizi makanan di katalog | ✅ diubah di tempat, sumber jadi "dikoreksi"; catatan lama tidak berubah |
 
@@ -188,8 +188,8 @@ dipastikan lebih dahulu.
 | WO-5 | Menandai set selesai | ✅ |
 | WO-6 | Estimasi kalori terbakar | ✅ dari set selesai atau waktu berjalan, mana yang lebih besar |
 | WO-7 | Menyimpan sesi latihan ke database | ✅ satu sesi per hari, gerakan sebagai baris anak |
-| WO-8 | Menambahkan gerakan ke rencana hari ini | ⬜ hanya membuka katalog |
-| WO-9 | Riwayat latihan | 🚧 data tersimpan per hari; layar riwayat belum ada |
+| WO-8 | Menambahkan gerakan ke rencana hari ini | ✅ rencana pindah ke tabel `workout_plan_exercises`; set & repetisi bisa disetel |
+| WO-9 | Riwayat latihan | ✅ daftar hari + rincian gerakan per tanggal, hanya-baca |
 | WO-10 | Gambar peraga gerakan | ✅ seluruh 48 gerakan, 2 foto (awal & akhir) dari free-exercise-db |
 | WO-11 | Menghapus gerakan dari latihan hari ini | ✅ tombol tong sampah + konfirmasi; soft delete di `workout_log_exercises` |
 
@@ -491,8 +491,9 @@ Memakai skala Tailwind bawaan, ditambah ukuran khusus:
 
 ### 8.1 Sudah selesai
 
-- 18 rute, 16 komponen bersama, token desain tunggal
-- **38 dari 58 requirement selesai** (per 11 Sep 2026)
+- 23 rute, 17 komponen bersama, token desain tunggal
+- **40 dari 55 requirement fungsional selesai** (per 11 Sep 2026),
+  di luar 10 NFR yang 6 di antaranya selesai
 - Target kalori & makro terhitung dari data tubuh
 - SQLite terpasang dengan schema siap-sinkron; profil sudah persisten
 
@@ -516,20 +517,15 @@ menurut apa yang menghalanginya.
 
 1. **Notifikasi pengingat tidur** (SLEEP-7) — sakelarnya sudah ada tapi belum
    berbunyi; butuh `expo-notifications` dan izin notifikasi
-2. **Riwayat per tanggal** (NUT-10, WO-9) — datanya sudah tersimpan lengkap
-   dengan `logged_on`, yang belum hanya layarnya
-3. **Ubah catatan makanan** (NUT-8) — hapus sudah bisa, ubah belum
+2. **Ubah catatan makanan** (NUT-8) — hapus sudah bisa, ubah belum
 
 **Perbaikan kecil**
 
-4. **HOME-1** sapaan mengikuti jam, bukan "Selamat pagi" tetap
-5. **HOME-5** kartu rekomendasi masih teks tetap
-6. **AUTH-5** centang syarat layanan belum memblokir tombol lanjut
-7. **PROF-7** ganti satuan baru mengubah label, angkanya belum dikonversi
-8. **WO-8** "Tambahkan gerakan" baru membuka katalog, belum menambah ke rencana
-   — catatan: menghapus gerakan (WO-11) sudah bisa, jadi sekarang rencana
-   hanya bisa menyusut, tidak bisa bertambah
-9. **NUT-5** mikronutrien belum ada di dataset katalog
+3. **HOME-1** sapaan mengikuti jam, bukan "Selamat pagi" tetap
+4. **HOME-5** kartu rekomendasi masih teks tetap
+5. **AUTH-5** centang syarat layanan belum memblokir tombol lanjut
+6. **PROF-7** ganti satuan baru mengubah label, angkanya belum dikonversi
+7. **NUT-5** mikronutrien belum ada di dataset katalog
 
 ### 8.3 Utang teknis
 
@@ -559,3 +555,6 @@ menurut apa yang menghalanginya.
 | 10 Sep 2026 | `sets`/`reps` dipindah dari katalog gerakan ke rencana harian | Satu gerakan bisa muncul dengan takaran berbeda; katalog jadi bebas duplikat |
 | 11 Sep 2026 | 48 gerakan free-exercise-db dikurasi manual, fokus bodyweight | "Populer" tidak ada di dataset; penyaringan otomatis melewatkan Bench Press & Plank |
 | 11 Sep 2026 | Kategori Bahu tetap ada meski memakai dumbbell, kebutuhan alat ditandai di UI | Dataset tidak punya gerakan bahu bodyweight; menghapus kategori lebih merugikan |
+| 11 Sep 2026 | Rencana latihan harian pindah dari konstanta ke tabel `workout_plan_exercises` | Tanpa tempat menyimpan, "Tambahkan gerakan" hanya bisa membuka sesi; rencana pun cuma bisa menyusut |
+| 11 Sep 2026 | Layar riwayat hanya-baca, dan hari tanpa catatan tidak ditampilkan | Daftar ini riwayat, bukan kalender — baris kosong memanjangkan tanpa menambah informasi |
+| 11 Sep 2026 | Riwayat nutrisi dibandingkan dengan target kalori HARI INI | Profil tidak menyimpan riwayat berat badan atau program, jadi target masa lalu tidak bisa dihitung ulang |
