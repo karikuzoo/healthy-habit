@@ -25,7 +25,13 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Izinkan Healthy Habit membaca gerak perangkat untuk menghitung langkah harianmu."
+        }
+      ]
     ]
   }
 }

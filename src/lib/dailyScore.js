@@ -4,16 +4,21 @@
  * Fungsi murni tanpa akses database, supaya bisa diuji terpisah dan dipakai
  * ulang di layar lain.
  *
- * Langkah kaki SENGAJA belum ikut dihitung: belum ada sumber datanya
- * (tidak ada pedometer, `step_logs` masih kosong), dan angka di dashboard
- * masih konstanta. Memasukkannya berarti sebagian skor berasal dari data
- * karangan. Tambahkan bobotnya di `SCORE_WEIGHTS` begitu datanya nyata.
+ * Langkah kaki ikut dihitung sejak 12 Sep 2026, setelah pedometer perangkat
+ * menjadi sumber datanya. Bobot ketiga komponen lama diturunkan untuk memberi
+ * tempat — totalnya harus tetap 1.
+ *
+ * Bobot langkah sengaja yang TERKECIL. Di Android angkanya selalu lebih kecil
+ * dari kenyataan (sensor hanya menghitung selagi aplikasi terbuka, lihat
+ * `useStepCounter`), jadi komponen inilah yang paling sering menghukum
+ * pengguna atas hal yang tidak mereka lakukan.
  */
 
 export const SCORE_WEIGHTS = {
-  sleep: 0.35,
-  nutrition: 0.35,
-  workout: 0.3,
+  sleep: 0.3,
+  nutrition: 0.3,
+  workout: 0.25,
+  steps: 0.15,
 };
 
 /** Rentang penilaian tidur, dalam menit. */
@@ -76,6 +81,8 @@ export function calculateDailyScore({
   calorieTarget,
   exercisesDone,
   exercisesPlanned,
+  steps = 0,
+  stepTarget = 0,
 }) {
   const calorieRatio = calorieTarget ? caloriesConsumed / calorieTarget : 0;
 
@@ -117,6 +124,14 @@ export function calculateDailyScore({
       score: ratioScore(exercisesDone, exercisesPlanned),
       direction: exercisesDone <= 0 ? 'missing' : exercisesDone < exercisesPlanned ? 'low' : 'ok',
     },
+    {
+      key: 'steps',
+      label: 'Langkah',
+      weight: SCORE_WEIGHTS.steps,
+      logged: steps > 0,
+      score: ratioScore(steps, stepTarget),
+      direction: steps <= 0 ? 'missing' : steps < stepTarget ? 'low' : 'ok',
+    },
   ];
 
   const total = Math.round(
@@ -145,6 +160,7 @@ const NUDGE = {
     high: 'asupan sudah melewati target',
   },
   workout: { missing: 'latihan belum dimulai', low: 'latihan belum selesai', high: '' },
+  steps: { missing: 'belum ada langkah tercatat', low: 'langkahmu belum mencapai target', high: '' },
 };
 
 function buildMessage(total, weakest) {

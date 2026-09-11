@@ -1,9 +1,10 @@
 import React, { useCallback, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import {
+  Button,
   Card,
   ProgressBar,
   ProgressRing,
@@ -18,10 +19,29 @@ import { dailyTotals } from "../../src/db/foodLogs";
 import { daySummary } from "../../src/db/workoutLogs";
 import { getTodayPlan } from "../../src/db/workoutPlan";
 import { calculateDailyScore } from "../../src/lib/dailyScore";
+import { useStepCounter } from "../../src/hooks/useStepCounter";
 import { formatNumber } from "../../src/lib/format";
 
-const STEPS = { current: 6248, target: 8000 };
 const EMPTY_TOTALS = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
+/** Laju jalan santai, dipakai menerjemahkan sisa langkah menjadi menit. */
+const STEPS_PER_MINUTE = 100;
+
+/**
+ * Alasan sensor langkah tidak dipakai, dalam kalimat yang bisa dibaca.
+ *
+ * Setiap keadaan di sini berakhir di tempat yang sama — tombol catat manual —
+ * tapi alasannya berbeda, dan pengguna berhak tahu yang mana.
+ */
+function sensorNotice(status, reason) {
+  if (status === "tidak-tersedia") {
+    return "Perangkat ini tidak punya sensor penghitung langkah.";
+  }
+  if (status === "galat") {
+    return `Sensor langkah tidak bisa dibaca: ${reason}`;
+  }
+  return "Izin sensor langkah belum diberikan, jadi langkah belum bisa dihitung otomatis.";
+}
 
 export default function HomeDashboard() {
   const db = useSQLiteContext();
@@ -37,6 +57,11 @@ export default function HomeDashboard() {
   // latihan membandingkan yang selesai dengan yang direncanakan.
   const [exercisesPlanned, setExercisesPlanned] = useState(0);
 
+  // Langkah datang dari sensor perangkat, bukan dari useFocusEffect di bawah:
+  // di Android hitungannya berjalan selama layar ini terpasang.
+  const pedometer = useStepCounter(db, user.id);
+  const { reload: reloadSteps } = pedometer;
+
   // Kalori dan tidur hari ini dibaca dari database, bukan data statis
   useFocusEffect(
     useCallback(() => {
@@ -48,7 +73,9 @@ export default function HomeDashboard() {
       getTodayPlan(db, user.id).then((plan) =>
         setExercisesPlanned(plan.length),
       );
-    }, [db, user.id]),
+      // Angka langkah bisa berubah dari layar catat manual
+      reloadSteps();
+    }, [db, user.id, reloadSteps]),
   );
 
   const score = calculateDailyScore({
@@ -57,10 +84,14 @@ export default function HomeDashboard() {
     calorieTarget: targetCalories,
     exercisesDone: workout.exercisesDone,
     exercisesPlanned,
+    steps: pedometer.steps,
+    stepTarget: pedometer.target,
   });
 
-  const stepsProgress = STEPS.current / STEPS.target;
-  const stepsLeft = Math.max(STEPS.target - STEPS.current, 0);
+  const stepsProgress = pedometer.target
+    ? pedometer.steps / pedometer.target
+    : 0;
+  const stepsLeft = Math.max(pedometer.target - pedometer.steps, 0);
 
   return (
     <Screen>
@@ -118,7 +149,7 @@ export default function HomeDashboard() {
                     Langkah kaki
                   </Text>
                   <Text className="text-xs text-ink-muted">
-                    Target harian {formatNumber(STEPS.target)}
+                    Target harian {formatNumber(pedometer.target)}
                   </Text>
                 </View>
               </View>
@@ -128,7 +159,7 @@ export default function HomeDashboard() {
             </View>
 
             <Text className="mb-3 mt-4 text-stat font-bold text-ink">
-              {formatNumber(STEPS.current)}{" "}
+              {formatNumber(pedometer.steps)}{" "}
               <Text className="text-base font-normal text-ink-muted">
                 langkah
               </Text>
@@ -136,9 +167,62 @@ export default function HomeDashboard() {
 
             <ProgressBar value={stepsProgress} barClassName="bg-steps" />
 
-            <Text className="mt-3 text-xs text-ink-muted">
-              {formatNumber(stepsLeft)} langkah lagi—jalan sore 18 menit cukup!
-            </Text>
+            {pedometer.usingSensor ? (
+              <>
+                <Text className="mt-3 text-xs text-ink-muted">
+                  {stepsLeft === 0
+                    ? "Target langkah hari ini tercapai."
+                    : `${formatNumber(stepsLeft)} langkah lagi—sekitar ${Math.max(
+                        Math.round(stepsLeft / STEPS_PER_MINUTE),
+                        1,
+                      )} menit jalan kaki.`}
+                </Text>
+
+                {/* Batas yang harus dikatakan, bukan disembunyikan. Sensornya
+                    tidak punya baseline sebelum aplikasi dibuka hari itu, jadi
+                    langkah sebelum itu memang tidak bisa dihitung. */}
+                {Platform.OS === "android" ? (
+                  <Text className="mt-1 text-2xs leading-4 text-ink-subtle">
+                    Dihitung sejak aplikasi pertama dibuka hari ini.
+                  </Text>
+                ) : null}
+              </>
+            ) : (
+              /* Sensor tidak bisa dipakai. Aksi utamanya yang BERFUNGSI —
+                 catat manual — bukan tombol izin yang mungkin tidak menghasilkan
+                 apa-apa. Mencoba izin tetap ditawarkan, tapi sebagai jalur
+                 kedua. */
+              <View className="mt-3 gap-2">
+                <Text className="text-xs leading-5 text-ink-muted">
+                  {sensorNotice(pedometer.status, pedometer.reason)}
+                </Text>
+
+                <Button
+                  label="Catat langkah manual"
+                  variant="soft"
+                  onPress={() => router.push("/steps/input")}
+                  className="h-11"
+                />
+
+                {pedometer.status === "ditolak" ||
+                pedometer.status === "terkunci" ? (
+                  <Pressable
+                    onPress={pedometer.requestPermission}
+                    accessibilityRole="button"
+                    className="flex-row items-center justify-center gap-1.5 py-1 active:opacity-70"
+                  >
+                    <Ionicons
+                      name="refresh"
+                      size={14}
+                      color={colors.ink.muted}
+                    />
+                    <Text className="text-xs font-semibold text-ink-muted">
+                      Coba izinkan sensor
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            )}
           </Card>
 
           {/* Ringkasan kesehatan */}
