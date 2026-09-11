@@ -5,7 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Button, Card, Chip, Field, Screen, ScreenHeader } from '../../src/components';
 import { colors } from '../../src/theme/colors';
-import { mealSlots } from '../../src/data/nutrition';
+import { mealSlots, portionLabel } from '../../src/data/nutrition';
 import { addFoodLogs } from '../../src/db/foodLogs';
 import { getFoodWithServings, scaleNutrition, searchFoods } from '../../src/db/foods';
 import { formatNumber } from '../../src/lib/format';
@@ -13,11 +13,6 @@ import { useUser } from '../../src/context/UserContext';
 
 /** Jeda sebelum query dijalankan, supaya tidak menembak DB tiap ketukan. */
 const DEBOUNCE_MS = 200;
-
-/** Label porsi untuk log: "1 porsi" atau "2 × 1 porsi". */
-function portionLabel(serving, quantity) {
-  return quantity === 1 ? serving.label : `${quantity} × ${serving.label}`;
-}
 
 export default function AddFoodScreen() {
   const db = useSQLiteContext();
@@ -178,7 +173,7 @@ export default function AddFoodScreen() {
         foodId: food.id,
         slot,
         name: food.name,
-        portion: portionLabel(serving, quantity),
+        portion: portionLabel(serving.label, quantity),
         servingLabel: serving.label,
         servingGrams: serving.grams,
         quantity,

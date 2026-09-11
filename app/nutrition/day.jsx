@@ -27,9 +27,12 @@ const EMPTY_TOTALS = { calories: 0, protein: 0, carbs: 0, fat: 0 };
 /**
  * Catatan makanan satu tanggal.
  *
- * Sengaja hanya membaca, tanpa tombol tambah atau hapus. Mengubah catatan
- * lama punya konsekuensi sendiri (NUT-8) dan layar ini bukan tempatnya —
- * di sini pengguna sedang melihat ke belakang, bukan mencatat.
+ * Tidak ada tombol tambah di sini: mencatat makanan selalu untuk hari ini,
+ * dan menambah ke hari lampau lebih mudah salah daripada berguna.
+ *
+ * Mengubah catatan yang SUDAH ada justru dibiarkan (NUT-8) — salah catat
+ * kemarin biasanya baru ketahuan hari ini, jadi menutup jalannya di sini
+ * berarti kesalahannya tidak bisa diperbaiki sama sekali.
  *
  * `listMealsForDay` dan `dailyTotals` sudah menerima tanggal sejak awal, jadi
  * tidak ada query baru yang perlu ditulis untuk layar ini.
@@ -142,35 +145,58 @@ export default function NutritionDayScreen() {
 
                 <Card className="overflow-hidden">
                   {meal.items.map((item, index) => (
-                    <Pressable
+                    <View
                       key={item.id}
-                      onPress={() =>
-                        router.push(`/nutrition/detail?log=${item.id}`)
-                      }
-                      accessibilityRole="button"
-                      className={`flex-row items-center gap-3 p-4 active:bg-surface-sunken ${
+                      className={`flex-row items-center pr-2 ${
                         index > 0 ? 'border-t border-line-soft' : ''
                       }`}
                     >
-                      <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-sunken">
+                      <Pressable
+                        onPress={() =>
+                          router.push(`/nutrition/detail?log=${item.id}`)
+                        }
+                        accessibilityRole="button"
+                        className="flex-1 flex-row items-center gap-3 p-4 active:bg-surface-sunken"
+                      >
+                        <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-sunken">
+                          <Ionicons
+                            name="fast-food-outline"
+                            size={18}
+                            color={colors.ink.muted}
+                          />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-base font-semibold text-ink">
+                            {item.name}
+                          </Text>
+                          <Text className="mt-0.5 text-xs text-ink-muted">
+                            P: {item.protein}g · C: {item.carbs}g · F: {item.fat}g
+                          </Text>
+                        </View>
+                        <Text className="text-sm font-bold text-brand-dark">
+                          {item.calories} kkal
+                        </Text>
+                      </Pressable>
+
+                      {/* Salah catat kemarin baru ketahuan hari ini — jadi
+                          jalan perbaikannya harus ada di sini juga, bukan
+                          hanya di catatan hari ini. */}
+                      <Pressable
+                        onPress={() =>
+                          router.push(`/nutrition/edit-log?log=${item.id}`)
+                        }
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Ubah catatan ${item.name}`}
+                        className="p-2 active:opacity-60"
+                      >
                         <Ionicons
-                          name="fast-food-outline"
+                          name="create-outline"
                           size={18}
                           color={colors.ink.muted}
                         />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-base font-semibold text-ink">
-                          {item.name}
-                        </Text>
-                        <Text className="mt-0.5 text-xs text-ink-muted">
-                          P: {item.protein}g · C: {item.carbs}g · F: {item.fat}g
-                        </Text>
-                      </View>
-                      <Text className="text-sm font-bold text-brand-dark">
-                        {item.calories} kkal
-                      </Text>
-                    </Pressable>
+                      </Pressable>
+                    </View>
                   ))}
                 </Card>
               </View>

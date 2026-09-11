@@ -209,6 +209,103 @@ export async function addFoodLogs(db, userId, entries, loggedOn = todayLocal()) 
 }
 
 /**
+ * Angka gizi baru untuk catatan yang porsinya diubah (NUT-8).
+ *
+ * Diskalakan dari angka YANG SUDAH TERSIMPAN di baris log, bukan dihitung
+ * ulang dari katalog. Alasannya sama dengan alasan kolom salinan itu ada:
+ * catatan harus mengingat gizi seperti saat dicatat. Menghitung ulang dari
+ * katalog berarti koreksi katalog yang terjadi sesudahnya ikut masuk
+ * diam-diam — pengguna cuma mengubah jumlah porsi, tapi angka kemarin
+ * berubah.
+ *
+ * Basisnya `weight_g`: berapa pun gizinya, itu berlaku untuk sekian gram.
+ * Jadi porsi baru cukup dikalikan rasio beratnya.
+ *
+ * Cadangan ke katalog hanya untuk catatan lama yang `weight_g`-nya kosong —
+ * tanpa berat, tidak ada basis yang bisa diskalakan. Yang mengembalikan null
+ * berarti porsinya memang tidak bisa diubah (tak ada berat, tak ada katalog);
+ * waktu makannya masih boleh dipindah.
+ *
+ * Catatan: pembulatan dilakukan di setiap penyimpanan, jadi mengubah porsi
+ * berkali-kali bisa menggeser angka kurang dari 1 kkal. Itu harga dari
+ * mempertahankan basis catatan, dan jauh lebih kecil daripada ketelitian
+ * data gizinya sendiri.
+ */
+export function rescaleFoodLog(entry, { servingGrams, quantity }, food = null) {
+  const weightG = servingGrams * quantity;
+
+  if (entry.weightG > 0) {
+    const factor = weightG / entry.weightG;
+
+    return {
+      weightG,
+      calories: Math.round(entry.calories * factor),
+      protein: Math.round(entry.protein * factor),
+      carbs: Math.round(entry.carbs * factor),
+      fat: Math.round(entry.fat * factor),
+      basis: 'catatan',
+    };
+  }
+
+  if (food) {
+    const scaled = scaleNutrition(food, servingGrams, quantity);
+
+    return {
+      weightG: scaled.grams,
+      calories: scaled.calories,
+      protein: scaled.protein,
+      carbs: scaled.carbs,
+      fat: scaled.fat,
+      basis: 'katalog',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Mengubah satu catatan makanan: waktu makan, porsi, dan angkanya.
+ *
+ * `logged_on` sengaja TIDAK ikut diubah. Memindahkan catatan ke hari lain
+ * mengubah dua ringkasan harian sekaligus dan lebih dekat ke "pindah hari"
+ * daripada "perbaiki catatan" — kalau nanti dibutuhkan, itu fitur sendiri.
+ */
+export async function updateFoodLog(db, foodLogId, patch) {
+  const timestamp = nowIso();
+
+  await db.runAsync(
+    `UPDATE food_logs
+        SET meal_slot     = ?,
+            portion       = ?,
+            serving_label = ?,
+            serving_grams = ?,
+            quantity      = ?,
+            weight_g      = ?,
+            calories      = ?,
+            protein_g     = ?,
+            carbs_g       = ?,
+            fat_g         = ?,
+            updated_at    = ?,
+            synced_at     = NULL
+      WHERE id = ? AND deleted_at IS NULL`,
+    [
+      patch.slot,
+      patch.portion,
+      patch.servingLabel ?? null,
+      patch.servingGrams ?? null,
+      patch.quantity ?? null,
+      patch.weightG ?? null,
+      patch.calories ?? 0,
+      patch.protein ?? 0,
+      patch.carbs ?? 0,
+      patch.fat ?? 0,
+      timestamp,
+      foodLogId,
+    ],
+  );
+}
+
+/**
  * Soft delete: baris tetap ada agar penghapusannya bisa disinkronkan.
  * `synced_at` dikosongkan supaya ikut terangkut sinkronisasi berikutnya.
  */

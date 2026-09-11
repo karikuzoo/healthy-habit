@@ -145,35 +145,60 @@ export default function NutritionScreen() {
 
                 <Card className="overflow-hidden">
                   {meal.items.map((item, index) => (
-                    <Pressable
+                    <View
                       key={item.id}
-                      onPress={() => router.push(`/nutrition/detail?log=${item.id}`)}
-                      onLongPress={() => confirmDelete(item)}
-                      accessibilityRole="button"
-                      accessibilityHint="Ketuk untuk detail, tekan lama untuk menghapus"
-                      className={`flex-row items-center gap-3 p-4 active:bg-surface-sunken ${
+                      className={`flex-row items-center pr-2 ${
                         index > 0 ? "border-t border-line-soft" : ""
                       }`}
                     >
-                      <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-sunken">
+                      <Pressable
+                        onPress={() =>
+                          router.push(`/nutrition/detail?log=${item.id}`)
+                        }
+                        onLongPress={() => confirmDelete(item)}
+                        accessibilityRole="button"
+                        accessibilityHint="Ketuk untuk detail, tekan lama untuk menghapus"
+                        className="flex-1 flex-row items-center gap-3 p-4 active:bg-surface-sunken"
+                      >
+                        <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-sunken">
+                          <Ionicons
+                            name="fast-food-outline"
+                            size={18}
+                            color={colors.ink.muted}
+                          />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-base font-semibold text-ink">
+                            {item.name}
+                          </Text>
+                          <Text className="mt-0.5 text-xs text-ink-muted">
+                            P: {item.protein}g · C: {item.carbs}g · F: {item.fat}g
+                          </Text>
+                        </View>
+                        <Text className="text-sm font-bold text-brand-dark">
+                          {item.calories} kkal
+                        </Text>
+                      </Pressable>
+
+                      {/* Ubah porsi atau waktu makan (NUT-8). Tekan-lama untuk
+                          menghapus tetap ada, tapi tidak lagi jadi satu-satunya
+                          jalan keluar dari catatan yang keliru. */}
+                      <Pressable
+                        onPress={() =>
+                          router.push(`/nutrition/edit-log?log=${item.id}`)
+                        }
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Ubah catatan ${item.name}`}
+                        className="p-2 active:opacity-60"
+                      >
                         <Ionicons
-                          name="fast-food-outline"
+                          name="create-outline"
                           size={18}
                           color={colors.ink.muted}
                         />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-base font-semibold text-ink">
-                          {item.name}
-                        </Text>
-                        <Text className="mt-0.5 text-xs text-ink-muted">
-                          P: {item.protein}g · C: {item.carbs}g · F: {item.fat}g
-                        </Text>
-                      </View>
-                      <Text className="text-sm font-bold text-brand-dark">
-                        {item.calories} kkal
-                      </Text>
-                    </Pressable>
+                      </Pressable>
+                    </View>
                   ))}
                 </Card>
               </View>
