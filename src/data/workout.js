@@ -113,12 +113,16 @@ export const exercises = {
 };
 
 /**
- * Rencana latihan hari ini — hanya id beserta resepnya.
+ * Rencana latihan BAWAAN — hanya id beserta resepnya.
  *
- * Ringkasan di atas layar (jumlah gerakan, estimasi kalori) diturunkan dari
- * daftar ini, bukan ditulis terpisah. Kalau jumlah gerakan berubah,
- * `durationMinutes` dan `estimatedCalories` perlu ikut disesuaikan karena
- * `estimateCalories` membagi estimasi itu dengan jumlah gerakan.
+ * Ini benih, bukan rencana yang ditampilkan. Rencana sebenarnya tinggal di
+ * tabel `workout_plan_exercises` (lihat `src/db/workoutPlan.js`): daftar ini
+ * disalin ke sana sekali di hari pertama pengguna membuka tab Workout, lalu
+ * pengguna bebas menambah, menghapus, dan mengubah set/repetisinya.
+ *
+ * `durationMinutes` dan `estimatedCalories` berlaku untuk rencana seukuran
+ * ini; untuk rencana yang sudah disunting, pakai `planEstimate(planSize)`
+ * yang menskalakan keduanya per gerakan.
  */
 export const todayWorkout = {
   level: 'Pemula',
@@ -153,10 +157,23 @@ export function resolveExercise(id, prescription = DEFAULT_PRESCRIPTION) {
   return { id, ...definition, ...prescription };
 }
 
-/** Gerakan pada rencana hari ini, sudah tergabung dengan resepnya. */
-export function planExercises() {
-  return todayWorkout.plan
-    .map((item) => resolveExercise(item.id, { sets: item.sets, reps: item.reps }))
+/**
+ * Menggabungkan baris rencana dari database dengan definisi gerakannya.
+ *
+ * Baris rencana hanya menyimpan `exerciseId` beserta resepnya; nama, kategori,
+ * dan alat tetap tinggal di katalog. Gerakan yang tidak ada lagi di katalog
+ * dibuang di sini, supaya katalog boleh dirapikan tanpa merusak rencana yang
+ * sudah tersimpan.
+ */
+export function resolvePlan(items) {
+  return items
+    .map((item) => {
+      const exercise = resolveExercise(item.exerciseId, {
+        sets: item.sets,
+        reps: item.reps,
+      });
+      return exercise ? { ...exercise, planId: item.planId } : null;
+    })
     .filter(Boolean);
 }
 
@@ -183,6 +200,52 @@ export function formatSets(exercise) {
 }
 
 /**
+ * Satuan resep yang bisa dipilih pengguna saat menyetel gerakan.
+ *
+ * `reps` disimpan sebagai satu teks ("12 repetisi" / "30 detik") karena
+ * itulah bentuk yang sudah dipakai kolom `reps` di database dan seluruh
+ * label di layar. `parseReps` membongkarnya kembali menjadi angka + satuan
+ * supaya layar penyetelan bisa menaik-turunkannya.
+ */
+export const repUnits = [
+  { value: 'repetisi', label: 'Repetisi' },
+  { value: 'detik', label: 'Detik' },
+];
+
+const DEFAULT_REPS = { amount: 12, unit: 'repetisi' };
+
+/** "30 detik" -> { amount: 30, unit: 'detik' } */
+export function parseReps(reps) {
+  const match = /([0-9]+)[ ]*([a-zA-Z]+)/.exec(String(reps ?? ''));
+  if (!match) return { ...DEFAULT_REPS };
+
+  const unit = match[2].toLowerCase().startsWith('detik') ? 'detik' : 'repetisi';
+  return { amount: Number(match[1]), unit };
+}
+
+/** Kebalikan `parseReps`. */
+export function formatReps(amount, unit) {
+  return `${amount} ${unit === 'detik' ? 'detik' : 'repetisi'}`;
+}
+
+/**
+ * Estimasi durasi dan kalori untuk rencana sepanjang `planSize` gerakan.
+ *
+ * Angka di `todayWorkout` hanya berlaku untuk rencana bawaan. Begitu
+ * pengguna menambah atau menghapus gerakan, keduanya harus ikut bergerak —
+ * kalau tidak, rencana berisi 12 gerakan tetap mengaku 28 menit.
+ */
+export function planEstimate(planSize) {
+  const baseline = todayWorkout.plan.length || 1;
+  const share = planSize / baseline;
+
+  return {
+    calories: Math.round(todayWorkout.estimatedCalories * share),
+    durationMinutes: Math.round(todayWorkout.durationMinutes * share),
+  };
+}
+
+/**
  * Estimasi kalori terbakar untuk satu gerakan.
  *
  * Diambil nilai TERBESAR antara dua sinyal, bukan hanya waktu:
@@ -194,9 +257,14 @@ export function formatSets(exercise) {
  * orang yang menandai setnya tanpa menjalankan timer — padahal timernya
  * opsional dan setnya jelas kerja nyata.
  */
-export function estimateCalories({ exercise, completedSets = 0, elapsedSeconds = 0 }) {
-  const exerciseCount = todayWorkout.plan.length || 1;
-  const shareOfPlan = todayWorkout.estimatedCalories / exerciseCount;
+export function estimateCalories({
+  exercise,
+  completedSets = 0,
+  elapsedSeconds = 0,
+  planSize = todayWorkout.plan.length,
+}) {
+  const exerciseCount = planSize || 1;
+  const shareOfPlan = planEstimate(exerciseCount).calories / exerciseCount;
 
   const fromSets = exercise.sets
     ? shareOfPlan * Math.min(completedSets / exercise.sets, 1)

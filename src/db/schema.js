@@ -21,7 +21,7 @@
 
 export const DATABASE_NAME = 'healthyhabit.db';
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 const V1 = `
 PRAGMA journal_mode = 'wal';
@@ -202,6 +202,46 @@ CREATE INDEX idx_food_servings_unsynced ON food_servings(synced_at) WHERE synced
 `;
 
 /**
+ * V3 — rencana latihan harian yang bisa disunting pengguna.
+ *
+ * Sebelumnya rencana hari ini adalah konstanta di `src/data/workout.js`, jadi
+ * menambah atau menghapus gerakan tidak punya tempat untuk disimpan: tombol
+ * "Tambahkan gerakan" langsung membuka sesi latihan, dan gerakan yang dihapus
+ * muncul lagi begitu layar dibuka ulang.
+ *
+ * `sets` dan `reps` ikut di tabel ini, bukan di katalog gerakan, karena
+ * keduanya resep latihan milik pengguna — gerakan yang sama boleh 3×12 hari
+ * ini dan 4×15 minggu depan. `reps` tetap TEXT supaya satu kolom bisa memuat
+ * "12 repetisi" maupun "30 detik", sama seperti `workout_log_exercises.reps`.
+ *
+ * Rencana disimpan per tanggal (`planned_on`), sehingga rencana kemarin tetap
+ * utuh dan hari baru dimulai lagi dari rencana bawaan.
+ */
+const V3 = `
+CREATE TABLE workout_plan_exercises (
+  id           TEXT PRIMARY KEY NOT NULL,
+  user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  planned_on   TEXT NOT NULL,
+  exercise_id  TEXT NOT NULL,
+  sets         INTEGER NOT NULL DEFAULT 3,
+  reps         TEXT NOT NULL,
+  position     INTEGER NOT NULL DEFAULT 0,
+  updated_at   TEXT NOT NULL,
+  synced_at    TEXT,
+  deleted_at   TEXT
+);
+
+-- Satu baris per gerakan per hari. Menambahkan gerakan yang pernah dihapus
+-- menghidupkan kembali baris lamanya, bukan menduplikasinya.
+CREATE UNIQUE INDEX idx_workout_plan_unique
+  ON workout_plan_exercises(user_id, planned_on, exercise_id);
+
+CREATE INDEX idx_workout_plan_day ON workout_plan_exercises(user_id, planned_on);
+CREATE INDEX idx_workout_plan_unsynced
+  ON workout_plan_exercises(synced_at) WHERE synced_at IS NULL;
+`;
+
+/**
  * Dijalankan lewat prop `onInit` milik SQLiteProvider, sebelum children render.
  * Versi schema dilacak dengan `PRAGMA user_version`.
  */
@@ -231,6 +271,11 @@ export async function migrate(db) {
   if (version === 1) {
     await db.execAsync(V2);
     version = 2;
+  }
+
+  if (version === 2) {
+    await db.execAsync(V3);
+    version = 3;
   }
 
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);

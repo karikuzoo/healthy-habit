@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   ExerciseMedia,
+  Loading,
   Screen,
   ScreenHeader,
 } from "../../src/components";
@@ -17,14 +18,13 @@ import {
   equipmentLabel,
   estimateCalories,
   formatSets,
-  planExercises,
   resolveExercise,
-  todayWorkout,
 } from "../../src/data/workout";
 import {
   getExerciseProgress,
   logExerciseSession,
 } from "../../src/db/workoutLogs";
+import { listPlan } from "../../src/db/workoutPlan";
 import { useUser } from "../../src/context/UserContext";
 
 /** 95 -> "01:35" */
@@ -65,16 +65,35 @@ export default function SessionScreen() {
 
   const running = startedAt !== null;
 
-  const exercise =
-    resolveExercise(exerciseId) ??
-    planExercises()[0] ??
-    resolveExercise("bodyweight-squat");
+  /**
+   * Rencana hari ini, dibaca sekali saat layar dibuka.
+   *
+   * Set dan repetisi diambil dari BARIS RENCANA, bukan dari katalog: angka
+   * itulah yang disetel pengguna saat menambahkan gerakannya. Gerakan yang
+   * dibuka dari luar rencana tetap bisa dilatih dengan resep bawaan katalog.
+   */
+  const [plan, setPlan] = useState(null);
 
-  const position = (todayWorkout.plan || []).findIndex(
-    (item) => item.id === exercise?.id,
-  );
-  // Gerakan bisa datang dari rencana harian maupun katalog kategori, jadi
-  // dicari di katalog — bukan hanya di rencana.
+  useEffect(() => {
+    let active = true;
+    listPlan(db, user.id).then((items) => {
+      if (active) setPlan(items);
+    });
+    return () => {
+      active = false;
+    };
+  }, [db, user.id]);
+
+  const planned = (plan ?? []).find((item) => item.exerciseId === exerciseId);
+
+  const exercise =
+    resolveExercise(
+      exerciseId,
+      planned ? { sets: planned.sets, reps: planned.reps } : undefined,
+    ) ?? resolveExercise("bodyweight-squat");
+
+  const position = planned?.position ?? 0;
+
   // Lanjutkan dari set yang sudah tercatat hari ini, bukan mulai dari nol
   useEffect(() => {
     let active = true;
@@ -142,6 +161,7 @@ export default function SessionScreen() {
     exercise,
     completedSets: newSets,
     elapsedSeconds: elapsed,
+    planSize: plan?.length,
   });
 
   const handleFinish = async () => {
@@ -168,6 +188,17 @@ export default function SessionScreen() {
 
     router.back();
   };
+
+  // Ditahan sampai rencana terbaca, supaya jumlah set tidak sempat tampil
+  // dengan angka bawaan katalog lalu berganti ke angka yang disetel pengguna.
+  if (!plan) {
+    return (
+      <Screen>
+        <ScreenHeader title="Sesi Latihan" />
+        <Loading />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>

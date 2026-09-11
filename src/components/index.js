@@ -14,3 +14,4 @@ export { Segmented } from './Segmented';
 export { SelectField } from './SelectField';
 export { StatTile } from './StatTile';
 export { StepProgress } from './StepProgress';
+export { Stepper } from './Stepper';

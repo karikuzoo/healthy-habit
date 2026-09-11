@@ -16,7 +16,7 @@ import { formatDuration } from "../../src/data/sleep";
 import { getSleepForDay } from "../../src/db/sleepLogs";
 import { dailyTotals } from "../../src/db/foodLogs";
 import { todaySummary } from "../../src/db/workoutLogs";
-import { todayWorkout } from "../../src/data/workout";
+import { getTodayPlan } from "../../src/db/workoutPlan";
 import { calculateDailyScore } from "../../src/lib/dailyScore";
 import { formatNumber } from "../../src/lib/format";
 
@@ -32,6 +32,10 @@ export default function HomeDashboard() {
     durationMinutes: 0,
     exercisesDone: 0,
   });
+  // Jumlah gerakan yang direncanakan dibaca dari rencana hari ini, bukan dari
+  // konstanta katalog: rencananya bisa disunting pengguna, sementara skor
+  // latihan membandingkan yang selesai dengan yang direncanakan.
+  const [exercisesPlanned, setExercisesPlanned] = useState(0);
 
   // Kalori dan tidur hari ini dibaca dari database, bukan data statis
   useFocusEffect(
@@ -41,6 +45,9 @@ export default function HomeDashboard() {
         setSleepMinutes(row?.durationMinutes ?? null),
       );
       todaySummary(db, user.id).then(setWorkout);
+      getTodayPlan(db, user.id).then((plan) =>
+        setExercisesPlanned(plan.length),
+      );
     }, [db, user.id]),
   );
 
@@ -49,7 +56,7 @@ export default function HomeDashboard() {
     caloriesConsumed: consumed.calories,
     calorieTarget: targetCalories,
     exercisesDone: workout.exercisesDone,
-    exercisesPlanned: todayWorkout.plan.length,
+    exercisesPlanned,
   });
 
   const stepsProgress = STEPS.current / STEPS.target;

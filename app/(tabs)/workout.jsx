@@ -8,7 +8,8 @@ import { colors } from "../../src/theme/colors";
 import {
   equipmentLabel,
   formatSets,
-  planExercises,
+  planEstimate,
+  resolvePlan,
   todayWorkout,
 } from "../../src/data/workout";
 import {
@@ -16,6 +17,7 @@ import {
   listTodayExercises,
   todaySummary,
 } from "../../src/db/workoutLogs";
+import { getTodayPlan, removePlanExercise } from "../../src/db/workoutPlan";
 import { useUser } from "../../src/context/UserContext";
 
 const EMPTY_SUMMARY = { durationMinutes: 0, calories: 0, exercisesDone: 0 };
@@ -36,18 +38,33 @@ export default function WorkoutScreen() {
   const [progress, setProgress] = useState(() => new Map());
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
 
-  const [exercises, setExercises] = useState(() => planExercises());
+  /**
+   * Rencana dibaca dari database, bukan dari konstanta katalog. Itu yang
+   * membuat gerakan tambahan bertahan setelah layar ditutup — dan gerakan
+   * yang dihapus tidak muncul lagi.
+   *
+   * `null` berarti belum selesai dibaca; daftar kosong berarti rencana yang
+   * memang dikosongkan pengguna. Keduanya tidak boleh tertukar, karena yang
+   * satu menampilkan ajakan menambah gerakan dan yang lain tidak.
+   */
+  const [exercises, setExercises] = useState(null);
+
+  const refresh = useCallback(async () => {
+    const [plan, done, today] = await Promise.all([
+      getTodayPlan(db, user.id),
+      listTodayExercises(db, user.id),
+      todaySummary(db, user.id),
+    ]);
+
+    setExercises(resolvePlan(plan));
+    setProgress(done);
+    setSummary(today);
+  }, [db, user.id]);
 
   useFocusEffect(
     useCallback(() => {
-      Promise.all([
-        listTodayExercises(db, user.id),
-        todaySummary(db, user.id),
-      ]).then(([done, today]) => {
-        setProgress(done);
-        setSummary(today);
-      });
-    }, [db, user.id]),
+      refresh();
+    }, [refresh]),
   );
 
   // Handler untuk konfirmasi dan menghapus gerakan
@@ -61,27 +78,20 @@ export default function WorkoutScreen() {
           text: "Hapus",
           style: "destructive",
           onPress: async () => {
-            // 1. Hapus catatan dari DB
+            // Dikeluarkan dari rencana sekaligus dari catatan hari ini. Kalau
+            // hanya catatannya yang dihapus, gerakannya muncul lagi di rencana
+            // begitu layar dibuka ulang.
+            await removePlanExercise(db, user.id, exercise.id);
             await deleteTodayExercise(db, user.id, exercise.id);
-
-            // 2. Hapus gerakan dari daftar tampilan (UI)
-            setExercises((prev) =>
-              prev.filter((item) => item.id !== exercise.id),
-            );
-
-            // 3. Refresh ringkasan
-            const [done, today] = await Promise.all([
-              listTodayExercises(db, user.id),
-              todaySummary(db, user.id),
-            ]);
-            setProgress(done);
-            setSummary(today);
+            await refresh();
           },
         },
       ],
     );
   };
 
+  const plan = exercises ?? [];
+  const estimate = planEstimate(plan.length);
   const started = summary.exercisesDone > 0;
 
   return (
@@ -89,7 +99,7 @@ export default function WorkoutScreen() {
       <View className="px-5">
         <Text className="text-3xl font-bold text-ink">Workout</Text>
         <Text className="mt-1 text-sm text-ink-muted">
-          {todayWorkout.level} • {todayWorkout.durationMinutes} menit •{" "}
+          {todayWorkout.level} • {estimate.durationMinutes} menit •{" "}
           {todayWorkout.intensity}
         </Text>
 
@@ -97,17 +107,15 @@ export default function WorkoutScreen() {
         <View className="mt-5 rounded-card bg-brand p-4">
           <View className="flex-row items-center">
             <SummaryItem
-              value={
-                started ? summary.calories : todayWorkout.estimatedCalories
-              }
+              value={started ? summary.calories : estimate.calories}
               label="kkal"
             />
             <View className="h-8 w-px bg-white/25" />
             <SummaryItem
               value={
                 started
-                  ? `${summary.exercisesDone}/${exercises.length}`
-                  : exercises.length
+                  ? `${summary.exercisesDone}/${plan.length}`
+                  : plan.length
               }
               label="gerakan"
             />
@@ -130,14 +138,28 @@ export default function WorkoutScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} className="mt-5">
         <View className="gap-3 px-5 pb-4">
-          {exercises.map((exercise, index) => {
+          {exercises && plan.length === 0 ? (
+            <Card className="items-center gap-2 p-8">
+              <Ionicons
+                name="barbell-outline"
+                size={28}
+                color={colors.ink.subtle}
+              />
+              <Text className="text-center text-sm text-ink-muted">
+                Rencana hari ini masih kosong. Tambahkan gerakan untuk mulai
+                menyusunnya.
+              </Text>
+            </Card>
+          ) : null}
+
+          {plan.map((exercise, index) => {
             const done = progress.get(exercise.id);
             const complete = done && done.setsCompleted >= exercise.sets;
 
             return (
               <Card
-                key={exercise.id}
-                className="flex-row items-center gap-3 p-3"
+                key={exercise.planId}
+                className="flex-row items-center gap-1 p-3"
               >
                 {/* Area utama (klik untuk ke halaman Sesi) */}
                 <Pressable
@@ -189,11 +211,29 @@ export default function WorkoutScreen() {
                   </View>
                 </Pressable>
 
+                {/* Ubah set dan repetisi gerakan ini */}
+                <Pressable
+                  onPress={() =>
+                    router.push(`/workout/configure?exercise=${exercise.id}`)
+                  }
+                  hitSlop={8}
+                  className="p-2 active:opacity-60"
+                  accessibilityRole="button"
+                  accessibilityLabel={`Ubah set dan repetisi ${exercise.name}`}
+                >
+                  <Ionicons
+                    name="create-outline"
+                    size={20}
+                    color={colors.ink.muted}
+                  />
+                </Pressable>
+
                 {/* Tombol Sampah untuk Menghapus */}
                 <Pressable
                   onPress={() => handleDeleteExercise(exercise)}
-                  hitSlop={10}
+                  hitSlop={8}
                   className="p-2 active:opacity-60"
+                  accessibilityRole="button"
                   accessibilityLabel={`Hapus gerakan ${exercise.name}`}
                 >
                   <Ionicons
