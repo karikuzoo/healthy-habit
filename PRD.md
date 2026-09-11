@@ -183,14 +183,42 @@ dipastikan lebih dahulu.
 |---|---|---|
 | WO-1 | Rencana latihan harian dengan ringkasan (kalori, jumlah gerakan, istirahat) | ✅ 7 gerakan, 28 menit, 184 kkal |
 | WO-2 | Jumlah gerakan diturunkan dari daftar, bukan angka terpisah | ✅ |
-| WO-3 | Katalog gerakan per kategori (Kaki, Dada, Punggung, Inti) | ✅ |
+| WO-3 | Katalog gerakan per kategori | ✅ 6 kategori (Kaki, Dada, Punggung, Bahu, Lengan, Inti), 48 gerakan |
 | WO-4 | Sesi latihan dengan penghitung waktu (play/pause/reset, berbasis jam dinding) | ✅ |
 | WO-5 | Menandai set selesai | ✅ |
 | WO-6 | Estimasi kalori terbakar | ✅ dari set selesai atau waktu berjalan, mana yang lebih besar |
 | WO-7 | Menyimpan sesi latihan ke database | ✅ satu sesi per hari, gerakan sebagai baris anak |
 | WO-8 | Menambahkan gerakan ke rencana hari ini | ⬜ hanya membuka katalog |
 | WO-9 | Riwayat latihan | 🚧 data tersimpan per hari; layar riwayat belum ada |
-| WO-10 | Gambar peraga gerakan | ✅ seluruh 19 gerakan, 2 foto (awal & akhir) dari free-exercise-db |
+| WO-10 | Gambar peraga gerakan | ✅ seluruh 48 gerakan, 2 foto (awal & akhir) dari free-exercise-db |
+| WO-11 | Menghapus gerakan dari latihan hari ini | ✅ tombol tong sampah + konfirmasi; soft delete di `workout_log_exercises` |
+
+**WO-10 — sumber gambar peraga** (ditetapkan 10–11 Sep 2026)
+
+Foto diambil dari [free-exercise-db](https://github.com/yuhonas/free-exercise-db)
+(**Unlicense / domain publik**, 876 gerakan). Isinya **pasangan JPG awal–akhir,
+bukan GIF** — `ExerciseMedia` yang menganimasikannya dengan berganti frame tiap
+900 ms.
+
+`scripts/fetch-exercise-media.mjs` mengunduh dan menghasilkan
+`src/data/exerciseMedia.generated.js` sebagai modul JS berisi `require()`
+literal — **bukan JSON**, karena Metro hanya membundel aset dari `require()`
+dengan jalur literal.
+
+Pemetaan nama ditulis manual di `MAPPING`, tidak dicocokkan otomatis. Pencocokan
+fuzzy pernah dicoba dan memilih entri yang salah (mengambil hasil `includes()`
+pertama), jadi setiap pasangan sekarang dipilih dan diberi komentar satu per
+satu. Nama gerakan di repo hanya dipakai untuk mengambil aset; **nama yang
+tampil di aplikasi tetap nama kita sendiri.**
+
+Kurasi 48 gerakan (dari 876) dipilih manual, bukan disaring otomatis —
+"populer" tidak dapat diturunkan dari field mana pun di dataset. Fokusnya
+**bodyweight** (29 dari 48) dan tingkat expert dibuang. Impor penuh diukur
+≈ 93 MB; kurasi ini ≈ 5,8 MB.
+
+Batasan dataset yang tidak bisa dihindari: **tidak ada satu pun gerakan bahu
+bodyweight**, sehingga kategori Bahu memakai dumbbell; punggung memerlukan
+palang. Kebutuhan alat ditandai di UI lewat `equipmentLabel()`.
 
 ### 3.6 Profil
 
@@ -463,7 +491,8 @@ Memakai skala Tailwind bawaan, ditambah ukuran khusus:
 
 ### 8.1 Sudah selesai
 
-- 16 rute, 14 komponen bersama, token desain tunggal
+- 18 rute, 16 komponen bersama, token desain tunggal
+- **38 dari 58 requirement selesai** (per 11 Sep 2026)
 - Target kalori & makro terhitung dari data tubuh
 - SQLite terpasang dengan schema siap-sinkron; profil sudah persisten
 
@@ -498,6 +527,8 @@ menurut apa yang menghalanginya.
 6. **AUTH-5** centang syarat layanan belum memblokir tombol lanjut
 7. **PROF-7** ganti satuan baru mengubah label, angkanya belum dikonversi
 8. **WO-8** "Tambahkan gerakan" baru membuka katalog, belum menambah ke rencana
+   — catatan: menghapus gerakan (WO-11) sudah bisa, jadi sekarang rencana
+   hanya bisa menyusut, tidak bisa bertambah
 9. **NUT-5** mikronutrien belum ada di dataset katalog
 
 ### 8.3 Utang teknis
@@ -523,3 +554,8 @@ menurut apa yang menghalanginya.
 | 8 Sep 2026 | Mode gelap dihapus dari lingkup | Sakelarnya tidak pernah mengubah tema |
 | 8 Sep 2026 | Arsitektur data local-first: SQLite + Postgres | Pencatatan harus jalan offline; server untuk akun & backup |
 | 8 Sep 2026 | `react-dom` dipin ke 19.2.3 | Menyamakan dengan pin `react` milik Expo SDK 57 |
+| 9 Sep 2026 | Katalog & catatan dipisah; `food_logs.food_id` sengaja tanpa foreign key | Mengoreksi atau menghapus entri katalog tidak boleh mengubah riwayat |
+| 9 Sep 2026 | Angka gizi keliru diperbaiki lewat tabel `CORRECTIONS` eksplisit, bukan heuristik | Diukur dulu: heuristik "lemak > karbo" menandai 19 entri, hanya 1 benar-benar salah |
+| 10 Sep 2026 | `sets`/`reps` dipindah dari katalog gerakan ke rencana harian | Satu gerakan bisa muncul dengan takaran berbeda; katalog jadi bebas duplikat |
+| 11 Sep 2026 | 48 gerakan free-exercise-db dikurasi manual, fokus bodyweight | "Populer" tidak ada di dataset; penyaringan otomatis melewatkan Bench Press & Plank |
+| 11 Sep 2026 | Kategori Bahu tetap ada meski memakai dumbbell, kebutuhan alat ditandai di UI | Dataset tidak punya gerakan bahu bodyweight; menghapus kategori lebih merugikan |
