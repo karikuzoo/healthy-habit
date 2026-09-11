@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Button, Field, Screen, Segmented } from '../src/components';
+import { enterApp } from '../src/lib/navigation';
 import { useUser } from '../src/context/UserContext';
 
 const TABS = [
@@ -16,7 +17,7 @@ export default function LoginScreen() {
 
   const handleLogin = () => {
     login();
-    router.replace('/(tabs)');
+    enterApp();
   };
 
   return (

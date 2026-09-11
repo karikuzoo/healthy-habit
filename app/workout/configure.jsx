@@ -141,10 +141,11 @@ export default function ConfigureExerciseScreen() {
      * Kembali ke tab Workout, bukan ke daftar kategori: gerakan yang baru
      * ditambahkan harus langsung terlihat di rencananya.
      *
-     * Sengaja `dismissTo` ke tab itu sendiri, BUKAN `dismissAll`. Layar
-     * welcome masih tertinggal di dasar stack (login memakai `replace`, jadi
-     * hanya layar login yang tergantikan), sehingga "pop to top" justru
-     * memulangkan pengguna ke halaman welcome.
+     * Sengaja menyebut tujuannya (`dismissTo`) alih-alih "pop to top"
+     * (`dismissAll`). Keduanya kebetulan sama-sama mendarat di tab selama
+     * tab itu ada di dasar stack — dan itu asumsi yang pernah tidak berlaku:
+     * sebelum `enterApp()` ada, layar Welcome masih tertinggal di bawahnya
+     * dan `dismissAll` justru memulangkan pengguna ke sana.
      */
     router.dismissTo('/(tabs)/workout');
   };

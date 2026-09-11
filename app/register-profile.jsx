@@ -11,6 +11,7 @@ import {
   StepProgress,
 } from '../src/components';
 import { activityLevels, genders, programs } from '../src/data/profile';
+import { enterApp } from '../src/lib/navigation';
 import { useUser } from '../src/context/UserContext';
 
 export default function RegisterProfileScreen() {
@@ -30,7 +31,7 @@ export default function RegisterProfileScreen() {
       ...(weight ? { weight: Number(weight) } : null),
     });
     login();
-    router.replace('/(tabs)');
+    enterApp();
   };
 
   return (
