@@ -18,7 +18,10 @@ import { getSleepForDay } from "../../src/db/sleepLogs";
 import { dailyTotals } from "../../src/db/foodLogs";
 import { daySummary } from "../../src/db/workoutLogs";
 import { getTodayPlan } from "../../src/db/workoutPlan";
-import { calculateDailyScore } from "../../src/lib/dailyScore";
+import {
+  calculateDailyScore,
+  buildFitSyncPlan,
+} from "../../src/lib/dailyScore";
 import { useStepCounter } from "../../src/hooks/useStepCounter";
 import { formatNumber } from "../../src/lib/format";
 
@@ -79,6 +82,17 @@ export default function HomeDashboard() {
   );
 
   const score = calculateDailyScore({
+    sleepMinutes,
+    caloriesConsumed: consumed.calories,
+    calorieTarget: targetCalories,
+    exercisesDone: workout.exercisesDone,
+    exercisesPlanned,
+    steps: pedometer.steps,
+    stepTarget: pedometer.target,
+  });
+
+  const fitSyncPlan = buildFitSyncPlan({
+    score,
     sleepMinutes,
     caloriesConsumed: consumed.calories,
     calorieTarget: targetCalories,
@@ -263,14 +277,10 @@ export default function HomeDashboard() {
               <Ionicons name="sparkles" size={16} color={colors.brand.dark}>
                 {" "}
               </Ionicons>
-              Today's FitSync Plan
+              {fitSyncPlan.title}
             </Text>
             <Text className="text-sm leading-6 text-brand-darker">
-              Light Cardio recommended{" "}
-              {sleepMinutes != null &&
-                ` (${formatDuration(sleepMinutes)} sleep detected)`}
-              . Focus on an active recovery jog and steady breathing to optimize
-              longevity.
+              {fitSyncPlan.body}
             </Text>
           </View>
         </View>

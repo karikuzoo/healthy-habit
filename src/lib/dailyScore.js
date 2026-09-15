@@ -14,6 +14,9 @@
  * pengguna atas hal yang tidak mereka lakukan.
  */
 
+import { formatDuration } from "../data/sleep";
+import { formatNumber } from "./format";
+
 export const SCORE_WEIGHTS = {
   sleep: 0.3,
   nutrition: 0.3,
@@ -22,7 +25,12 @@ export const SCORE_WEIGHTS = {
 };
 
 /** Rentang penilaian tidur, dalam menit. */
-const SLEEP_BAND = { zeroLow: 240, idealLow: 420, idealHigh: 540, zeroHigh: 720 };
+const SLEEP_BAND = {
+  zeroLow: 240,
+  idealLow: 420,
+  idealHigh: 540,
+  zeroHigh: 720,
+};
 
 /** Batas penilaian nutrisi, sebagai rasio terhadap target kalori. */
 const CALORIE_IDEAL_HIGH = 1.1;
@@ -58,7 +66,10 @@ function intakeScore(ratio) {
   if (ratio <= 0) return 0;
   if (ratio <= CALORIE_IDEAL_HIGH) return Math.min(ratio, 1);
 
-  return Math.max((CALORIE_ZERO_HIGH - ratio) / (CALORIE_ZERO_HIGH - CALORIE_IDEAL_HIGH), 0);
+  return Math.max(
+    (CALORIE_ZERO_HIGH - ratio) / (CALORIE_ZERO_HIGH - CALORIE_IDEAL_HIGH),
+    0,
+  );
 }
 
 /** Skor linear 0..1 untuk besaran yang makin banyak makin bagus. */
@@ -88,49 +99,54 @@ export function calculateDailyScore({
 
   const components = [
     {
-      key: 'sleep',
-      label: 'Tidur',
+      key: "sleep",
+      label: "Tidur",
       weight: SCORE_WEIGHTS.sleep,
       logged: sleepMinutes != null && sleepMinutes > 0,
       score: sleepMinutes ? bandScore(sleepMinutes, SLEEP_BAND) : 0,
       direction: !sleepMinutes
-        ? 'missing'
+        ? "missing"
         : sleepMinutes < SLEEP_BAND.idealLow
-          ? 'low'
+          ? "low"
           : sleepMinutes > SLEEP_BAND.idealHigh
-            ? 'high'
-            : 'ok',
+            ? "high"
+            : "ok",
     },
     {
-      key: 'nutrition',
-      label: 'Nutrisi',
+      key: "nutrition",
+      label: "Nutrisi",
       weight: SCORE_WEIGHTS.nutrition,
       logged: caloriesConsumed > 0,
       score: intakeScore(calorieRatio),
       direction:
         caloriesConsumed <= 0
-          ? 'missing'
+          ? "missing"
           : calorieRatio > CALORIE_IDEAL_HIGH
-            ? 'high'
+            ? "high"
             : calorieRatio < 1
-              ? 'low'
-              : 'ok',
+              ? "low"
+              : "ok",
     },
     {
-      key: 'workout',
-      label: 'Latihan',
+      key: "workout",
+      label: "Latihan",
       weight: SCORE_WEIGHTS.workout,
       logged: exercisesDone > 0,
       score: ratioScore(exercisesDone, exercisesPlanned),
-      direction: exercisesDone <= 0 ? 'missing' : exercisesDone < exercisesPlanned ? 'low' : 'ok',
+      direction:
+        exercisesDone <= 0
+          ? "missing"
+          : exercisesDone < exercisesPlanned
+            ? "low"
+            : "ok",
     },
     {
-      key: 'steps',
-      label: 'Langkah',
+      key: "steps",
+      label: "Langkah",
       weight: SCORE_WEIGHTS.steps,
       logged: steps > 0,
       score: ratioScore(steps, stepTarget),
-      direction: steps <= 0 ? 'missing' : steps < stepTarget ? 'low' : 'ok',
+      direction: steps <= 0 ? "missing" : steps < stepTarget ? "low" : "ok",
     },
   ];
 
@@ -140,7 +156,9 @@ export function calculateDailyScore({
 
   // Komponen dengan kehilangan poin terbesar — dasar kalimat sarannya
   const weakest = components.reduce((worst, item) =>
-    (1 - item.score) * item.weight > (1 - worst.score) * worst.weight ? item : worst,
+    (1 - item.score) * item.weight > (1 - worst.score) * worst.weight
+      ? item
+      : worst,
   );
 
   return {
@@ -153,22 +171,102 @@ export function calculateDailyScore({
 
 /** Saran mengikuti ARAH penyimpangan, bukan hanya komponennya. */
 const NUDGE = {
-  sleep: { missing: 'tidur belum dicatat', low: 'tidurmu masih kurang', high: 'tidurmu kelewat lama' },
-  nutrition: {
-    missing: 'belum ada asupan tercatat',
-    low: 'asupan belum mencapai target',
-    high: 'asupan sudah melewati target',
+  sleep: {
+    missing: "tidur belum dicatat",
+    low: "tidurmu masih kurang",
+    high: "tidurmu kelewat lama",
   },
-  workout: { missing: 'latihan belum dimulai', low: 'latihan belum selesai', high: '' },
-  steps: { missing: 'belum ada langkah tercatat', low: 'langkahmu belum mencapai target', high: '' },
+  nutrition: {
+    missing: "belum ada asupan tercatat",
+    low: "asupan belum mencapai target",
+    high: "asupan sudah melewati target",
+  },
+  workout: {
+    missing: "latihan belum dimulai",
+    low: "latihan belum selesai",
+    high: "",
+  },
+  steps: {
+    missing: "belum ada langkah tercatat",
+    low: "langkahmu belum mencapai target",
+    high: "",
+  },
 };
 
 function buildMessage(total, weakest) {
-  if (total >= 85) return 'Kamu dalam ritme yang baik';
-  if (total === 0) return 'Belum ada catatan hari ini';
+  if (total >= 85) return "Kamu dalam ritme yang baik";
+  if (total === 0) return "Belum ada catatan hari ini";
 
   const nudge = NUDGE[weakest.key]?.[weakest.direction];
-  if (!nudge) return 'Lanjutkan ritmemu';
+  if (!nudge) return "Lanjutkan ritmemu";
 
   return total >= 60 ? `Sudah lumayan—${nudge}` : `Ayo mulai—${nudge}`;
+}
+
+/**
+ * Rekomendasi "Today's FitSync Plan" — kalimat aksi mengikuti komponen skor
+ * yang paling tertinggal (`weakest`), bukan teks tetap seperti sebelumnya.
+ *
+ * Dipisah dari `buildMessage` (kalimat pendek untuk kartu skor) karena
+ * kartu FitSync punya ruang lebih dan tujuannya beda: bukan meringkas
+ * skornya, tapi menyarankan LANGKAH KONKRET — tidur kurang menyarankan
+ * latihan ringan, asupan kurang menyarankan makan dulu, dst.
+ *
+ * Dipakai bareng oleh Home dan Workout supaya keduanya menunjukkan saran
+ * yang sama persis untuk data hari yang sama.
+ */
+export function buildFitSyncPlan({
+  score,
+  sleepMinutes,
+  caloriesConsumed,
+  calorieTarget,
+  exercisesDone,
+  exercisesPlanned,
+  steps = 0,
+  stepTarget = 0,
+}) {
+  if (score.total === 0) {
+    return {
+      title: "Today's Fit Advice",
+      body: "Belum ada catatan hari ini. Mulai dari salah satu—tidur, makan, langkah, atau latihan—supaya rencananya bisa disesuaikan.",
+    };
+  }
+
+  const { weakest } = score;
+  const calorieRatio = calorieTarget ? caloriesConsumed / calorieTarget : 0;
+
+  const byComponent = {
+    sleep: {
+      missing:
+        "Tidur belum dicatat hari ini. Latihan ringan tetap aman, tapi catat jam tidurmu dulu supaya rekomendasi berikutnya lebih akurat.",
+      low: `${sleepMinutes ? formatDuration(sleepMinutes) : "—"} sleep detected. Focus on an active recovery jog and steady breathing to optimize longevity.`,
+      high: `${sleepMinutes ? formatDuration(sleepMinutes) : "—"} tidur cukup panjang. Latihan intensitas sedang bisa membantu jam tidurmu kembali normal besok.`,
+      ok: "Tidur sudah cukup—ini waktu yang bagus untuk latihan intensitas sedang sampai tinggi.",
+    },
+    nutrition: {
+      missing:
+        "Belum ada asupan tercatat. Catat makanmu dulu supaya rencana latihan bisa disesuaikan dengan energi yang tersedia hari ini.",
+      low: `Baru ${Math.round(calorieRatio * 100)}% dari target kalori. Pilih latihan ringan dulu, dan pastikan makan cukup sebelum sesi yang lebih berat.`,
+      high: `Sudah ${Math.round(calorieRatio * 100)}% dari target kalori. Latihan kardio intensitas sedang bisa membantu menyeimbangkannya.`,
+      ok: "Asupan nutrisi sudah seimbang—energi harianmu cukup untuk latihan intensitas penuh.",
+    },
+    workout: {
+      missing:
+        "Belum ada gerakan yang dikerjakan hari ini. Mulai dari rencana latihanmu, sekalipun baru beberapa set.",
+      low: `Baru ${exercisesDone} dari ${exercisesPlanned} gerakan selesai. Lanjutkan rencana hari ini untuk melengkapinya.`,
+      ok: "Latihan hari ini sudah tuntas. Kerja bagus—istirahat yang cukup untuk pemulihan.",
+    },
+    steps: {
+      missing:
+        "Belum ada langkah tercatat. Jalan santai sebentar, atau catat langkahmu manual kalau sensor tidak tersedia.",
+      low: `${formatNumber(Math.max(stepTarget - steps, 0))} langkah lagi menuju target harian. Jalan santai 15–20 menit bisa membantu mengejarnya.`,
+      ok: "Target langkah hari ini sudah tercapai—pertahankan ritmenya.",
+    },
+  };
+
+  const body =
+    byComponent[weakest.key]?.[weakest.direction] ??
+    "Lanjutkan ritmemu—semua komponen dalam kondisi baik.";
+
+  return { title: "Today's FitSync Plan", body };
 }
