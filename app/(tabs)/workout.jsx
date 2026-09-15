@@ -1,14 +1,14 @@
-import React, { useCallback, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { Alert, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
+import * as Haptics from "expo-haptics";
 import { addDays, format, isToday, startOfWeek } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Button, Card, ExerciseMedia, Screen } from "../../src/components";
 import { colors } from "../../src/theme/colors";
 import {
-  equipmentLabel,
   exerciseCategories,
   formatSets,
   planEstimate,
@@ -16,7 +16,6 @@ import {
   todayWorkout,
 } from "../../src/data/workout";
 import {
-  daySummary,
   deleteTodayExercise,
   listTodayExercises,
 } from "../../src/db/workoutLogs";
@@ -25,7 +24,21 @@ import { getSleepForDay } from "../../src/db/sleepLogs";
 import { formatDuration } from "../../src/data/sleep";
 import { useUser } from "../../src/context/UserContext";
 
-const EMPTY_SUMMARY = { durationMinutes: 0, calories: 0, exercisesDone: 0 };
+/** Pilihan preset rest timer, dalam detik. 0 berarti "Off". */
+const REST_PRESETS = [0, 15, 30, 45, 60, 90, 120];
+
+/** 69 -> "01:09" */
+function formatClock(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, "0")}:${seconds
+    .toString()
+    .padStart(2, "0")}`;
+}
+
+function formatRestLabel(seconds) {
+  return seconds === 0 ? "Off" : `${seconds}s`;
+}
 
 function SummaryItem({ value, label }) {
   return (
@@ -163,7 +176,6 @@ export default function WorkoutScreen() {
   const { user } = useUser();
 
   const [progress, setProgress] = useState(() => new Map());
-  const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [sleepMinutes, setSleepMinutes] = useState(null);
 
   /**
@@ -185,26 +197,117 @@ export default function WorkoutScreen() {
    */
   const [expanded, setExpanded] = useState(false);
 
+  /**
+   * Timer sesi latihan (layar "Rincian latihan"), lokal ke layar ini —
+   * bukan dicatat ke database. `sessionState`:
+   *
+   * - 'idle'    belum ditekan Mulai Latihan sama sekali, atau habis RESET.
+   * - 'running' berjalan, `elapsedSeconds` naik tiap detik.
+   * - 'paused'  berhenti manual (rest timer di-set "Off" lalu Pause ditekan).
+   * - 'resting' menghitung MUNDUR sebesar rest timer yang di-set pengguna;
+   *             `elapsedSeconds` tetap naik (total durasi termasuk istirahat),
+   *             begitu `restSecondsLeft` habis, alarm bunyi dan otomatis
+   *             kembali ke 'running' tanpa perlu ditekan lagi.
+   */
+  const [sessionState, setSessionState] = useState("idle");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [restTimerSeconds, setRestTimerSeconds] = useState(0);
+  const [restSecondsLeft, setRestSecondsLeft] = useState(0);
+  const [showRestPicker, setShowRestPicker] = useState(false);
+  const [restAlarmVisible, setRestAlarmVisible] = useState(false);
+
   const refresh = useCallback(async () => {
-    const [plan, done, today, sleep] = await Promise.all([
+    const [plan, done, sleep] = await Promise.all([
       getTodayPlan(db, user.id),
       listTodayExercises(db, user.id),
-      daySummary(db, user.id),
       getSleepForDay(db, user.id),
     ]);
 
     setExercises(resolvePlan(plan));
     setProgress(done);
-    setSummary(today);
     setSleepMinutes(sleep?.durationMinutes ?? null);
   }, [db, user.id]);
 
   useFocusEffect(
     useCallback(() => {
       setExpanded(false);
+      // Sesi timer ikut direset setiap layar dibuka ulang, supaya tidak ada
+      // hitungan "hantu" yang jalan terus di belakang layar lain.
+      setSessionState("idle");
+      setElapsedSeconds(0);
+      setRestSecondsLeft(0);
       refresh();
     }, [refresh]),
   );
+
+  /**
+   * "Alarm" waktu istirahat habis. Project ini belum punya library audio
+   * (expo-av/expo-audio), jadi dipakai getaran berulang + banner singkat —
+   * tetap terasa meski HP disilent. Kalau nanti mau bunyi asli, tinggal
+   * ganti/tambah di sini.
+   */
+  const triggerRestAlarm = () => {
+    setRestAlarmVisible(true);
+    setTimeout(() => setRestAlarmVisible(false), 2500);
+
+    [0, 300, 600].forEach((delay) => {
+      setTimeout(() => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }, delay);
+    });
+  };
+
+  // Detak jam sesi: jalan tiap detik selagi 'running' atau 'resting'.
+  useEffect(() => {
+    if (sessionState !== "running" && sessionState !== "resting") {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      setElapsedSeconds((seconds) => seconds + 1);
+
+      if (sessionState === "resting") {
+        setRestSecondsLeft((secondsLeft) => {
+          if (secondsLeft <= 1) {
+            triggerRestAlarm();
+            setSessionState("running");
+            return 0;
+          }
+          return secondsLeft - 1;
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [sessionState]);
+
+  const handlePrimaryPress = () => {
+    if (sessionState === "idle" || sessionState === "paused") {
+      setSessionState("running");
+      return;
+    }
+
+    if (sessionState === "running") {
+      if (restTimerSeconds > 0) {
+        setRestSecondsLeft(restTimerSeconds);
+        setSessionState("resting");
+      } else {
+        setSessionState("paused");
+      }
+      return;
+    }
+
+    if (sessionState === "resting") {
+      // Ditekan manual sebelum hitungan mundur habis: langsung lanjut.
+      setSessionState("running");
+    }
+  };
+
+  const handleResetSession = () => {
+    setSessionState("idle");
+    setElapsedSeconds(0);
+    setRestSecondsLeft(0);
+  };
 
   // Handler untuk konfirmasi dan menghapus gerakan
   const handleDeleteExercise = (exercise) => {
@@ -231,7 +334,6 @@ export default function WorkoutScreen() {
 
   const plan = exercises ?? [];
   const estimate = planEstimate(plan.length);
-  const started = summary.exercisesDone > 0;
   const isEmpty = exercises !== null && plan.length === 0;
   const showList = !isEmpty && expanded;
 
@@ -285,37 +387,42 @@ export default function WorkoutScreen() {
         </View>
 
         {showList ? (
-          /* Ringkasan Latihan */
-          <View className="mt-5 rounded-card bg-brand p-4">
-            <View className="flex-row items-center">
-              <SummaryItem
-                value={started ? summary.calories : estimate.calories}
-                label="kkal"
-              />
-              <View className="h-8 w-px bg-white/25" />
-              <SummaryItem
-                value={
-                  started
-                    ? `${summary.exercisesDone}/${plan.length}`
-                    : plan.length
-                }
-                label="gerakan"
-              />
-              <View className="h-8 w-px bg-white/25" />
-              <SummaryItem
-                value={
-                  started
-                    ? `${summary.durationMinutes}m`
-                    : `${todayWorkout.restSeconds}s`
-                }
-                label={started ? "durasi" : "istirahat"}
-              />
+          <>
+            {/* Ringkasan Latihan */}
+            <View className="mt-5 rounded-card bg-brand p-4">
+              <View className="flex-row items-center">
+                <SummaryItem value={estimate.calories} label="kkal" />
+                <View className="h-8 w-px bg-white/25" />
+                <SummaryItem value={plan.length} label="gerakan" />
+                <View className="h-8 w-px bg-white/25" />
+                <SummaryItem value={formatClock(elapsedSeconds)} label="Time" />
+              </View>
             </View>
 
-            <Text className="mt-3 text-center text-2xs text-white/70">
-              {started ? "Tercatat hari ini" : "Rencana hari ini"}
-            </Text>
-          </View>
+            <Pressable
+              onPress={() => setShowRestPicker(true)}
+              accessibilityRole="button"
+              className="mt-4 flex-row items-center gap-1.5 self-start active:opacity-70"
+            >
+              <Ionicons
+                name="timer-outline"
+                size={16}
+                color={colors.brand.DEFAULT}
+              />
+              <Text className="text-sm font-semibold text-brand-dark">
+                Rest Timer : {formatRestLabel(restTimerSeconds)}
+              </Text>
+            </Pressable>
+
+            {restAlarmVisible ? (
+              <View className="mt-2 flex-row items-center gap-1.5 self-start rounded-full bg-brand-soft px-3 py-1.5">
+                <Ionicons name="alarm" size={14} color={colors.brand.dark} />
+                <Text className="text-xs font-bold text-brand-dark">
+                  Istirahat selesai — lanjutkan!
+                </Text>
+              </View>
+            ) : null}
+          </>
         ) : (
           <DayStrip />
         )}
@@ -357,10 +464,7 @@ export default function WorkoutScreen() {
                       )}
 
                       <View className="flex-1">
-                        <Text className="text-2xs font-bold tracking-wider text-brand">
-                          GERAKAN {index + 1}
-                        </Text>
-                        <Text className="mt-0.5 text-base font-bold text-ink">
+                        <Text className="text-base font-bold text-ink">
                           {exercise.name}
                         </Text>
                         <Text className="mt-0.5 text-sm text-ink-muted">
@@ -368,19 +472,6 @@ export default function WorkoutScreen() {
                             ? `${done.setsCompleted} dari ${exercise.sets} set selesai`
                             : formatSets(exercise)}
                         </Text>
-
-                        {equipmentLabel(exercise) ? (
-                          <View className="mt-1 flex-row items-center gap-1">
-                            <Ionicons
-                              name="alert-circle-outline"
-                              size={11}
-                              color={colors.steps.DEFAULT}
-                            />
-                            <Text className="text-2xs text-steps">
-                              {equipmentLabel(exercise)}
-                            </Text>
-                          </View>
-                        ) : null}
                       </View>
                     </Pressable>
 
@@ -423,11 +514,58 @@ export default function WorkoutScreen() {
             </View>
           </ScrollView>
 
-          <View className="px-5 pb-3 pt-1">
-            <Button
-              label="Tambahkan gerakan"
+          <View className="gap-2 px-5 pb-3 pt-1">
+            <Pressable
               onPress={() => router.push("/workout/add")}
-            />
+              accessibilityRole="button"
+              className="flex-row items-center justify-center gap-1.5 py-1 active:opacity-70"
+            >
+              <Ionicons
+                name="add-circle-outline"
+                size={16}
+                color={colors.brand.DEFAULT}
+              />
+              <Text className="text-sm font-semibold text-brand-dark">
+                Tambahkan gerakan
+              </Text>
+            </Pressable>
+
+            <View className="flex-row gap-3">
+              <Button
+                variant="soft"
+                onPress={handleResetSession}
+                className="flex-1 flex-row items-center justify-center gap-1.5"
+              >
+                <Ionicons name="refresh" size={16} color={colors.brand.dark} />
+                <Text className="text-base font-bold text-brand-dark">
+                  RESET
+                </Text>
+              </Button>
+
+              <Button
+                onPress={handlePrimaryPress}
+                className="flex-[2] flex-row items-center justify-center gap-1.5"
+              >
+                <Ionicons
+                  name={
+                    sessionState === "running"
+                      ? "pause"
+                      : sessionState === "resting"
+                        ? "time"
+                        : "play"
+                  }
+                  size={16}
+                  color="#FFFFFF"
+                />
+                <Text className="text-base font-bold text-white">
+                  {sessionState === "running"
+                    ? "Pause"
+                    : sessionState === "resting"
+                      ? `Istirahat ${restSecondsLeft}s`
+                      : "Mulai Latihan"}
+                </Text>
+              </Button>
+            </View>
           </View>
         </>
       ) : (
@@ -477,6 +615,58 @@ export default function WorkoutScreen() {
           </View>
         </ScrollView>
       )}
+
+      {/* Picker Rest Timer */}
+      <Modal
+        visible={showRestPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRestPicker(false)}
+      >
+        <Pressable
+          className="flex-1 items-center justify-end bg-black/40"
+          onPress={() => setShowRestPicker(false)}
+        >
+          <Pressable
+            onPress={() => {}}
+            className="w-full rounded-t-3xl bg-surface-muted p-5 pb-8"
+          >
+            <Text className="mb-3 text-center text-base font-bold text-ink">
+              Atur Rest Timer
+            </Text>
+
+            {REST_PRESETS.map((seconds) => (
+              <Pressable
+                key={seconds}
+                onPress={() => {
+                  setRestTimerSeconds(seconds);
+                  setShowRestPicker(false);
+                }}
+                accessibilityRole="button"
+                className="flex-row items-center justify-between border-b border-surface-sunken py-3 active:opacity-70"
+              >
+                <Text className="text-base text-ink">
+                  {formatRestLabel(seconds)}
+                </Text>
+                {restTimerSeconds === seconds ? (
+                  <Ionicons
+                    name="checkmark"
+                    size={18}
+                    color={colors.brand.DEFAULT}
+                  />
+                ) : null}
+              </Pressable>
+            ))}
+
+            <Button
+              label="Tutup"
+              variant="soft"
+              onPress={() => setShowRestPicker(false)}
+              className="mt-4"
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }
