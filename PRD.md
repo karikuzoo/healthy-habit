@@ -368,7 +368,27 @@ akan membuat ON DELETE CASCADE mati pada peluncuran kedua.
 | NFR-7 | Aman terhadap area notch/home indicator | ✅ via `Screen` |
 | NFR-8 | Bar & ring progres tidak meluber saat data melebihi target | ✅ dijepit 0..1 |
 | NFR-9 | Data kesehatan terenkripsi saat disimpan | ⬜ SQLCipher butuh prebuild |
-| NFR-10 | Uji otomatis | ⬜ belum ada |
+| NFR-10 | Uji otomatis | 🚧 34 uji `node:test` untuk logika murni & query SQLite; komponen dan bagian workout belum |
+
+**NFR-10 — cara uji dijalankan** (ditetapkan 15 Sep 2026)
+
+```
+npm test
+```
+
+Memakai runner bawaan Node (`node --test`), tanpa dependensi tambahan. Yang
+diuji logika murni di `src/lib` & `src/data`, serta query di `src/db`
+terhadap SQLite sungguhan lewat `node:sqlite`.
+
+Schema uji datang dari `migrate()` yang sama dipakai aplikasi, bukan SQL
+yang disalin ulang — schema yang diketik ulang akan berhenti mencerminkan
+aslinya pada migrasi berikutnya, dan uji yang lulus di atas schema usang
+lebih berbahaya daripada tidak ada uji.
+
+Kode di `src/` ditulis untuk Metro, yang berbeda dari Node dalam tiga hal:
+impor `expo-crypto`, impor JSON polos, dan impor relatif tanpa ekstensi.
+Ketiganya ditangani `test/helpers/loader.mjs` — **di sisi uji, bukan dengan
+mengubah kode aplikasi**.
 
 **Target performa** ❓ — belum ditetapkan. Perlu angka konkret untuk waktu
 mulai dingin dan waktu render tab.
@@ -577,7 +597,8 @@ menurut apa yang menghalanginya.
 | Judul bagian berbahasa Inggris | "Active Program", "Settings", "Weekly Trend" — perlu keputusan: terjemahkan atau pertahankan |
 | Konversi satuan | PROF-7 mengubah label saja, angka belum dikonversi |
 | Akurasi langkah di Android | Pedometer butuh development build (Expo Go tidak punya izinnya). Bahkan di dev build, langkah sebelum aplikasi pertama dibuka dan selagi prosesnya mati tidak terhitung — perlu Health Connect untuk menutupnya |
-| Tanpa uji otomatis | Verifikasi saat ini bersandar pada keberhasilan bundling |
+| Uji komponen belum ada | `node:test` tidak bisa merender React Native. Layar masih diverifikasi dengan menjalankan aplikasi — ditunda sampai redesign selesai supaya tidak menguji tata letak yang akan diganti |
+| Bagian workout belum diuji | Sedang dikerjakan Rivaldy; `src/data/workout.js` dan `src/db/workoutPlan.js` menyusul setelah stabil |
 
 ---
 
@@ -604,3 +625,5 @@ menurut apa yang menghalanginya.
 | 12 Sep 2026 | Di Android langkah DIAKUMULASI per sesi, bukan ditimpa, dan langganan sensor tidak dibuat ulang | `getStepCountAsync` tidak ada di Android; menimpa akan menghapus sesi sebelumnya, dan tiap langganan baru mereset baseline sensor |
 | 12 Sep 2026 | Bobot skor dirombak jadi 30/30/25/15 | Langkah punya data nyata sekarang; bobotnya terkecil karena angkanya paling tidak akurat di Android |
 | 12 Sep 2026 | Input langkah manual disediakan sebagai cadangan pedometer | Expo Go Android tidak punya izin `ACTIVITY_RECOGNITION`; tanpa cadangan, fitur ini mati di lingkungan pengembangan yang dipakai sehari-hari |
+| 15 Sep 2026 | Uji otomatis memakai `node:test`, bukan jest-expo | Yang paling berisiko bergeser adalah logika & query, bukan tampilan; runner bawaan tidak menambah dependensi dan tidak menguji tata letak yang sebentar lagi diganti |
+| 15 Sep 2026 | Perbedaan Metro-vs-Node ditangani loader uji, bukan dengan mengubah kode aplikasi | Menyuntikkan pembuat id atau memindahkan impor JSON akan merumitkan kode produksi demi kebutuhan uji — urutan yang terbalik |
