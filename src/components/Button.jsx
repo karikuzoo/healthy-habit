@@ -1,17 +1,20 @@
-import React from 'react';
-import { Pressable, Text } from 'react-native';
+import React from "react";
+import { Pressable, Text } from "react-native";
 
 const VARIANTS = {
-  primary: { box: 'bg-brand', label: 'text-white' },
-  soft: { box: 'bg-brand-soft', label: 'text-brand-dark' },
-  outline: { box: 'bg-transparent border border-brand', label: 'text-brand-dark' },
+  primary: { box: "bg-brand", label: "text-white" },
+  soft: { box: "bg-brand-soft", label: "text-brand-dark" },
+  outline: {
+    box: "bg-transparent border border-brand",
+    label: "text-brand-dark",
+  },
 };
 
 export function Button({
   label,
   onPress,
-  variant = 'primary',
-  className = '',
+  variant = "primary",
+  className = "",
   children,
 }) {
   const styles = VARIANTS[variant] ?? VARIANTS.primary;
@@ -20,7 +23,7 @@ export function Button({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      className={`h-14 items-center justify-center rounded-2xl active:opacity-80 ${styles.box} ${className}`}
+      className={`h-14 items-center justify-center rounded-full active:opacity-80 ${styles.box} ${className}`}
     >
       {children ?? (
         <Text className={`text-base font-bold ${styles.label}`}>{label}</Text>
