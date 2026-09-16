@@ -106,3 +106,28 @@ test('portionLabel dan slotLabel', () => {
   // Nilai tak dikenal dikembalikan apa adanya, bukan jadi undefined
   assert.equal(slotLabel('entah'), 'entah');
 });
+
+test('dateLabel dan toIsoDate untuk tanggal lahir', async () => {
+  const { dateLabel, toIsoDate, fromIsoDate } = await import('../src/lib/dates.js');
+
+  assert.equal(dateLabel('1998-08-12'), '12 Agustus 1998');
+  assert.equal(dateLabel(null), '', 'tanggal kosong jadi teks kosong, bukan galat');
+  assert.equal(dateLabel(''), '');
+
+  // toISOString() akan mengonversi ke UTC lebih dulu, dan tanggal 12 Agustus
+  // yang dipilih di WIB bisa tersimpan sebagai 11 Agustus.
+  assert.equal(toIsoDate(new Date(1998, 7, 12)), '1998-08-12');
+  assert.equal(toIsoDate(new Date(2026, 0, 1)), '2026-01-01');
+
+  // Bolak-balik harus menghasilkan tanggal yang sama persis
+  assert.equal(toIsoDate(fromIsoDate('1998-08-12')), '1998-08-12');
+});
+
+test('fromIsoDate jatuh ke cadangan untuk nilai kosong atau tak sah', async () => {
+  const { fromIsoDate } = await import('../src/lib/dates.js');
+  const cadangan = new Date(2000, 0, 1);
+
+  assert.equal(fromIsoDate(null, cadangan), cadangan);
+  assert.equal(fromIsoDate('', cadangan), cadangan);
+  assert.equal(fromIsoDate('bukan-tanggal', cadangan), cadangan);
+});

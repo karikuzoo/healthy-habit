@@ -27,3 +27,31 @@ export function dayLabel(loggedOn) {
 export function fullDayLabel(loggedOn) {
   return format(parseISO(loggedOn), 'EEEE, d MMMM yyyy', { locale: idLocale });
 }
+
+/**
+ * '1998-08-12' -> "12 Agustus 1998" — untuk tanggal yang berdiri sendiri.
+ *
+ * Tanpa nama hari, berbeda dari `fullDayLabel`. Untuk tanggal lahir, "Rabu"
+ * tidak menambah apa pun dan hanya memanjangkan barisnya.
+ */
+export function dateLabel(iso) {
+  if (!iso) return '';
+  return format(parseISO(iso), 'd MMMM yyyy', { locale: idLocale });
+}
+
+/**
+ * Date -> 'YYYY-MM-DD' memakai zona waktu perangkat.
+ *
+ * `toISOString()` TIDAK dipakai karena ia mengonversi ke UTC lebih dulu:
+ * tanggal 12 Agustus yang dipilih di WIB bisa tersimpan sebagai 11 Agustus.
+ */
+export function toIsoDate(date) {
+  return format(date, 'yyyy-MM-dd');
+}
+
+/** 'YYYY-MM-DD' -> Date, atau `fallback` kalau kosong/tak sah. */
+export function fromIsoDate(iso, fallback = new Date()) {
+  if (!iso) return fallback;
+  const parsed = parseISO(iso);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+}

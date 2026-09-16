@@ -1,6 +1,10 @@
 export { Button } from './Button';
+export { ActionSheet } from './ActionSheet';
+export { Avatar } from './Avatar';
 export { Card } from './Card';
 export { Chip } from './Chip';
+export { DateField } from './DateField';
+export { DatePickerSheet } from './DatePickerSheet';
 export { ExerciseMedia } from './ExerciseMedia';
 export { Field } from './Field';
 export { FoodForm } from './FoodForm';

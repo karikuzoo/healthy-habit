@@ -6,6 +6,7 @@ import {
   Chip,
   Field,
   Screen,
+  DateField,
   ScreenHeader,
   SelectField,
   StepProgress,
@@ -14,19 +15,29 @@ import { activityLevels, genders, programs } from '../src/data/profile';
 import { enterApp } from '../src/lib/navigation';
 import { useUser } from '../src/context/UserContext';
 
+/** Dihitung sekali; membuat Date baru tiap render membingungkan pemilihnya. */
+const TODAY = new Date();
+const OLDEST_BIRTH_DATE = new Date(
+  TODAY.getFullYear() - 120,
+  TODAY.getMonth(),
+  TODAY.getDate(),
+);
+
 export default function RegisterProfileScreen() {
-  const { user, updateUser, login, birthDateLabel } = useUser();
+  const { user, updateUser, login } = useUser();
   const [activityLevel, setActivityLevel] = useState(user.activityLevel);
   const [gender, setGender] = useState(user.gender);
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
   const [program, setProgram] = useState('cutting');
+  const [birthDate, setBirthDate] = useState(user.birthDate ?? null);
 
   const handleContinue = async () => {
     await updateUser({
       activityLevel,
       gender,
       program,
+      ...(birthDate ? { birthDate } : null),
       ...(height ? { height: Number(height) } : null),
       ...(weight ? { weight: Number(weight) } : null),
     });
@@ -48,11 +59,17 @@ export default function RegisterProfileScreen() {
             onChange={setActivityLevel}
           />
 
-          <SelectField
+          {/* Batas atas hari ini: tidak ada yang lahir di masa depan. Batas
+              bawah 120 tahun supaya roda tahunnya tidak tak berujung. Usia
+              MINIMUM sengaja belum dipaksakan — itu keputusan produk yang
+              masih terbuka di PRD. */}
+          <DateField
             label="Tanggal lahir"
-            icon="calendar-outline"
-            value={birthDateLabel}
+            value={birthDate}
+            onChange={setBirthDate}
             placeholder="Pilih tanggal lahir"
+            minimumDate={OLDEST_BIRTH_DATE}
+            maximumDate={TODAY}
           />
 
           <SelectField
@@ -66,7 +83,8 @@ export default function RegisterProfileScreen() {
           <View className="flex-row gap-4">
             <Field
               label="Tinggi"
-              placeholder="165 cm"
+              placeholder="165"
+              suffix="cm"
               value={height}
               onChangeText={setHeight}
               keyboardType="numeric"
@@ -74,7 +92,8 @@ export default function RegisterProfileScreen() {
             />
             <Field
               label="Berat"
-              placeholder="58 kg"
+              placeholder="58"
+              suffix="kg"
               value={weight}
               onChangeText={setWeight}
               keyboardType="numeric"
