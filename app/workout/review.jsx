@@ -1,14 +1,23 @@
 import React from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { Button, Card, ExerciseMedia, Screen } from "../../src/components";
 import { colors } from "../../src/theme/colors";
 import { planEstimate, todayWorkout } from "../../src/data/workout";
-import { savePlanExercise } from "../../src/db/workoutPlan";
+import { saveTemplate, updateTemplate } from "../../src/db/workoutTemplates";
+import { replaceTodayPlanWithTemplate } from "../../src/db/workoutPlan";
 import { useUser } from "../../src/context/UserContext";
 import { useWorkoutBuilder } from "../../src/context/WorkoutBuilderContext";
+import { useLocalSearchParams } from "expo-router";
 
 /** Jarak naik/turun tiap satuan — repetisi 1 per ketuk, detik/menit 5 per ketuk. */
 const STEP_BY_UNIT = { repetisi: 1, detik: 5, menit: 5 };
@@ -58,6 +67,7 @@ function InlineStepper({ amount, unit, onChange }) {
 export default function WorkoutReviewScreen() {
   const db = useSQLiteContext();
   const { user } = useUser();
+  const { templateId, templateName: initialName } = useLocalSearchParams();
   const {
     items,
     totalSets,
@@ -69,6 +79,7 @@ export default function WorkoutReviewScreen() {
   } = useWorkoutBuilder();
 
   const [saving, setSaving] = React.useState(false);
+  const [templateName, setTemplateName] = React.useState(initialName || "");
   const estimate = planEstimate(items.length);
 
   const handleRemove = (item) => {
@@ -90,19 +101,21 @@ export default function WorkoutReviewScreen() {
     if (saving || items.length === 0) return;
     setSaving(true);
 
-    // Ditulis satu per satu, bukan sekali transaksi besar: gerakan yang sama
-    // dipilih dua kali (lewat "Salin") harus menggabung jadi satu baris
-    // rencana dengan resep gabungan terakhir, sama seperti perilaku
-    // `savePlanExercise` yang sudah ada — bukan menimbulkan galat duplikat.
-    for (const row of toPlanRows()) {
-      // eslint-disable-next-line no-await-in-loop
-      await savePlanExercise(db, user.id, row);
+    const nameToSave =
+      templateName.trim() === "" ? "Custom Template" : templateName.trim();
+
+    // Save to templates
+    if (templateId) {
+      await updateTemplate(db, templateId, nameToSave, toPlanRows());
+    } else {
+      await saveTemplate(db, user.id, nameToSave, toPlanRows());
     }
+    // Also set it as today's plan
+    await replaceTodayPlanWithTemplate(db, user.id, toPlanRows());
 
     clear();
-    // Kembali ke tab Workout, bukan ke daftar gerakan: rencana yang baru
-    // disusun harus langsung terlihat.
-    router.dismissTo("/(tabs)/workout");
+    // Kembali ke tab Workout, dan request agar daftar diexpand
+    router.navigate("/(tabs)/workout?expand=true");
   };
 
   return (
@@ -149,6 +162,19 @@ export default function WorkoutReviewScreen() {
             </View>
           </View>
         </View>
+
+        <View className="mt-5 px-1">
+          <Text className="mb-2 text-sm font-bold text-ink">Nama Template</Text>
+          <View className="rounded-xl border border-surface-sunken bg-surface px-4 py-3">
+            <TextInput
+              placeholder="Contoh: Latihan Otot Lengan"
+              value={templateName}
+              onChangeText={setTemplateName}
+              style={{ fontSize: 16, color: colors.ink.DEFAULT }}
+              placeholderTextColor={colors.ink.subtle}
+            />
+          </View>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} className="mt-5">
@@ -183,29 +209,31 @@ export default function WorkoutReviewScreen() {
                   onChange={(next) => updateAmount(item.key, next)}
                 />
 
-                <Pressable
-                  onPress={() => duplicateExercise(item.key)}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Salin ${item.name}`}
-                  className="p-1 active:opacity-60"
-                >
-                  <Ionicons
-                    name="copy-outline"
-                    size={19}
-                    color={colors.ink.muted}
-                  />
-                </Pressable>
+                <View className="gap-2 ml-2">
+                  <Pressable
+                    onPress={() => duplicateExercise(item.key)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Salin ${item.name}`}
+                    className="p-1 active:opacity-60 items-center justify-center"
+                  >
+                    <Ionicons
+                      name="copy-outline"
+                      size={19}
+                      color={colors.ink.muted}
+                    />
+                  </Pressable>
 
-                <Pressable
-                  onPress={() => handleRemove(item)}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Hapus ${item.name}`}
-                  className="p-1 active:opacity-60"
-                >
-                  <Ionicons name="trash-outline" size={19} color="#EF4444" />
-                </Pressable>
+                  <Pressable
+                    onPress={() => handleRemove(item)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Hapus ${item.name}`}
+                    className="p-1 active:opacity-60 items-center justify-center"
+                  >
+                    <Ionicons name="trash-outline" size={19} color="#EF4444" />
+                  </Pressable>
+                </View>
               </Card>
             ))
           )}
@@ -213,7 +241,7 @@ export default function WorkoutReviewScreen() {
           <Pressable
             onPress={() => router.push("/workout/type")}
             accessibilityRole="button"
-            className="items-center justify-center rounded-2xl border border-dashed border-brand py-4 active:opacity-70"
+            className="items-center justify-center rounded-2xl border border-dashed border-brand py-4 pb-8 pt-8 active:opacity-70"
           >
             <Text className="text-base font-bold text-brand-dark">
               + Tambah Gerakan
@@ -222,7 +250,7 @@ export default function WorkoutReviewScreen() {
         </View>
       </ScrollView>
 
-      <View className="px-5 pb-3 pt-1">
+      <View className="px-5 pb-16 pt-1">
         <Button
           label={saving ? "Menyimpan..." : "Simpan Latihan"}
           onPress={handleSave}

@@ -31,6 +31,7 @@ export default function CategoryScreen() {
     items: builderItems,
     isSelected,
     toggleExercise,
+    addExercise,
   } = useWorkoutBuilder();
 
   /**
@@ -127,26 +128,23 @@ export default function CategoryScreen() {
             </Card>
           ) : (
             exercises.map((exercise) => {
-              const added = isBuilderFlow
-                ? isSelected(exercise.id)
-                : planned.has(exercise.id);
+              const added = isBuilderFlow ? false : planned.has(exercise.id);
 
               return (
                 <Pressable
                   key={exercise.id}
-                  onPress={() =>
-                    isBuilderFlow
-                      ? toggleExercise(exercise)
-                      : router.push(
-                          `/workout/configure?exercise=${exercise.id}`,
-                        )
-                  }
+                  onPress={() => {
+                    if (isBuilderFlow) {
+                      addExercise(exercise);
+                      router.navigate("/workout/review");
+                    } else {
+                      router.push(`/workout/configure?exercise=${exercise.id}`);
+                    }
+                  }}
                   accessibilityRole="button"
                   accessibilityLabel={
                     isBuilderFlow
-                      ? added
-                        ? `Batalkan pilihan ${exercise.name}`
-                        : `Pilih ${exercise.name}`
+                      ? `Pilih ${exercise.name}`
                       : added
                         ? `Ubah ${exercise.name} di rencana`
                         : `Tambahkan ${exercise.name} ke rencana`
@@ -160,24 +158,7 @@ export default function CategoryScreen() {
                         {exercise.name}
                       </Text>
 
-                      {added ? (
-                        <View className="mt-0.5 flex-row items-center gap-1">
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={13}
-                            color={colors.brand.DEFAULT}
-                          />
-                          <Text className="text-sm font-semibold text-brand">
-                            {isBuilderFlow
-                              ? "Sudah dipilih"
-                              : "Sudah di rencana"}
-                          </Text>
-                        </View>
-                      ) : (
-                        <Text className="mt-0.5 text-sm text-ink-muted">
-                          {formatSets(exercise)}
-                        </Text>
-                      )}
+
 
                       {equipmentLabel(exercise) ? (
                         <View className="mt-1 flex-row items-center gap-1">
@@ -194,10 +175,8 @@ export default function CategoryScreen() {
                     </View>
                     <Ionicons
                       name={
-                        added
-                          ? isBuilderFlow
-                            ? "checkmark-circle"
-                            : "create-outline"
+                        added && !isBuilderFlow
+                          ? "create-outline"
                           : "add-circle-outline"
                       }
                       size={22}
@@ -214,21 +193,6 @@ export default function CategoryScreen() {
           )}
         </View>
       </ScrollView>
-
-      {isBuilderFlow && builderItems.length > 0 ? (
-        <View className="px-5 pb-3 pt-1">
-          <Pressable
-            onPress={() => router.push("/workout/review")}
-            accessibilityRole="button"
-            className="flex-row items-center justify-center gap-2 rounded-2xl bg-brand py-4 active:opacity-90"
-          >
-            <Ionicons name="list" size={18} color="#FFFFFF" />
-            <Text className="text-base font-bold text-white">
-              Lihat Gerakan ({builderItems.length})
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
     </Screen>
   );
 }

@@ -21,7 +21,7 @@
 
 export const DATABASE_NAME = 'healthyhabit.db';
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 5;
 
 const V1 = `
 PRAGMA journal_mode = 'wal';
@@ -241,14 +241,53 @@ CREATE INDEX idx_workout_plan_unsynced
   ON workout_plan_exercises(synced_at) WHERE synced_at IS NULL;
 `;
 
+const V4 = `
+CREATE TABLE workout_templates (
+  id           TEXT PRIMARY KEY NOT NULL,
+  user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name         TEXT NOT NULL,
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL,
+  synced_at    TEXT,
+  deleted_at   TEXT
+);
+
+CREATE TABLE workout_template_exercises (
+  id           TEXT PRIMARY KEY NOT NULL,
+  template_id  TEXT NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+  exercise_id  TEXT NOT NULL,
+  sets         INTEGER NOT NULL DEFAULT 3,
+  reps         TEXT NOT NULL,
+  position     INTEGER NOT NULL DEFAULT 0,
+  updated_at   TEXT NOT NULL,
+  synced_at    TEXT,
+  deleted_at   TEXT
+);
+
+CREATE INDEX idx_workout_templates_user ON workout_templates(user_id);
+CREATE INDEX idx_workout_template_exercises_parent ON workout_template_exercises(template_id);
+`;
+
 /**
- * Dijalankan lewat prop `onInit` milik SQLiteProvider, sebelum children render.
- * Versi schema dilacak dengan `PRAGMA user_version`.
+ * V5 — Menghapus constraint UNIQUE pada (user_id, planned_on, exercise_id).
+ *
+ * Sebelumnya satu gerakan hanya boleh muncul sekali per hari, tapi pengguna
+ * bisa saja ingin menambahkan gerakan yang sama dua kali (misalnya Shoulder
+ * Press di awal dan di akhir sesi). Index biasa (non-unique) sudah cukup
+ * untuk performa query harian.
+ */
+const V5 = `
+DROP INDEX IF EXISTS idx_workout_plan_unique;
+`;
+
+/**
+ * Dijalankan lewat prop \`onInit\` milik SQLiteProvider, sebelum children render.
+ * Versi schema dilacak dengan \`PRAGMA user_version\`.
  */
 export async function migrate(db) {
   /**
-   * `foreign_keys` adalah setelan PER-KONEKSI dan tidak ikut tersimpan di
-   * file database — berbeda dari `journal_mode`. Jadi harus dinyalakan
+   * \`foreign_keys\` adalah setelan PER-KONEKSI dan tidak ikut tersimpan di
+   * file database — berbeda dari \`journal_mode\`. Jadi harus dinyalakan
    * ulang setiap kali database dibuka, BUKAN sekali saat migrasi.
    *
    * Kalau ditaruh di dalam skrip V1, ON DELETE CASCADE akan diam-diam mati
@@ -276,6 +315,16 @@ export async function migrate(db) {
   if (version === 2) {
     await db.execAsync(V3);
     version = 3;
+  }
+
+  if (version === 3) {
+    await db.execAsync(V4);
+    version = 4;
+  }
+
+  if (version === 4) {
+    await db.execAsync(V5);
+    version = 5;
   }
 
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);

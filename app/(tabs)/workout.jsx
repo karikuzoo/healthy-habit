@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import * as Haptics from "expo-haptics";
 import { addDays, format, isToday, startOfWeek } from "date-fns";
@@ -23,6 +23,7 @@ import { getTodayPlan, removePlanExercise } from "../../src/db/workoutPlan";
 import { getSleepForDay } from "../../src/db/sleepLogs";
 import { formatDuration } from "../../src/data/sleep";
 import { useUser } from "../../src/context/UserContext";
+import { useWorkoutBuilder } from "../../src/context/WorkoutBuilderContext";
 
 /** Pilihan preset rest timer, dalam detik. 0 berarti "Off". */
 const REST_PRESETS = [0, 15, 30, 45, 60, 90, 120];
@@ -174,6 +175,7 @@ function ProgramSummaryCard({ plan, onPress }) {
 export default function WorkoutScreen() {
   const db = useSQLiteContext();
   const { user } = useUser();
+  const { loadFromPlan } = useWorkoutBuilder();
 
   const [progress, setProgress] = useState(() => new Map());
   const [sleepMinutes, setSleepMinutes] = useState(null);
@@ -228,16 +230,18 @@ export default function WorkoutScreen() {
     setSleepMinutes(sleep?.durationMinutes ?? null);
   }, [db, user.id]);
 
+  const { expand } = useLocalSearchParams();
+
   useFocusEffect(
     useCallback(() => {
-      setExpanded(false);
+      setExpanded(expand === "true");
       // Sesi timer ikut direset setiap layar dibuka ulang, supaya tidak ada
       // hitungan "hantu" yang jalan terus di belakang layar lain.
       setSessionState("idle");
       setElapsedSeconds(0);
       setRestSecondsLeft(0);
       refresh();
-    }, [refresh]),
+    }, [refresh, expand]),
   );
 
   /**
@@ -337,12 +341,6 @@ export default function WorkoutScreen() {
   const isEmpty = exercises !== null && plan.length === 0;
   const showList = !isEmpty && expanded;
 
-  const findProgramAlert = () =>
-    Alert.alert(
-      "Segera hadir",
-      'Program latihan siap pakai belum tersedia. Untuk sekarang, susun latihanmu sendiri lewat "Mulai Latihan".',
-    );
-
   return (
     <Screen>
       <View className="px-5">
@@ -350,7 +348,10 @@ export default function WorkoutScreen() {
           <View className="flex-1 flex-row items-start gap-3">
             {showList ? (
               <Pressable
-                onPress={() => setExpanded(false)}
+                onPress={() => {
+                  setExpanded(false);
+                  router.setParams({ expand: "" });
+                }}
                 hitSlop={8}
                 accessibilityRole="button"
                 accessibilityLabel="Kembali ke ringkasan latihan"
@@ -399,20 +400,38 @@ export default function WorkoutScreen() {
               </View>
             </View>
 
-            <Pressable
-              onPress={() => setShowRestPicker(true)}
-              accessibilityRole="button"
-              className="mt-4 flex-row items-center gap-1.5 self-start active:opacity-70"
-            >
-              <Ionicons
-                name="timer-outline"
-                size={16}
-                color={colors.brand.DEFAULT}
-              />
-              <Text className="text-sm font-semibold text-brand-dark">
-                Rest Timer : {formatRestLabel(restTimerSeconds)}
-              </Text>
-            </Pressable>
+            <View className="mt-4 flex-row items-center justify-between">
+              <Pressable
+                onPress={() => setShowRestPicker(true)}
+                accessibilityRole="button"
+                className="flex-row items-center gap-1.5 active:opacity-70"
+              >
+                <Ionicons
+                  name="timer-outline"
+                  size={16}
+                  color={colors.brand.DEFAULT}
+                />
+                <Text className="text-sm font-semibold text-brand-dark">
+                  Rest Timer : {formatRestLabel(restTimerSeconds)}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  loadFromPlan(plan);
+                  router.push("/workout/review");
+                }}
+                hitSlop={8}
+                accessibilityRole="button"
+                className="flex-row items-center gap-1 p-1 active:opacity-60"
+              >
+                <Ionicons
+                  name="create-outline"
+                  size={20}
+                  color={colors.brand.DEFAULT}
+                />
+              </Pressable>
+            </View>
 
             {restAlarmVisible ? (
               <View className="mt-2 flex-row items-center gap-1.5 self-start rounded-full bg-brand-soft px-3 py-1.5">
@@ -439,75 +458,30 @@ export default function WorkoutScreen() {
                 return (
                   <Card
                     key={exercise.planId}
-                    className="flex-row items-center gap-1 p-3"
+                    className="flex-row items-center gap-3 p-3"
                   >
-                    {/* Area utama (klik untuk ke halaman Sesi) */}
-                    <Pressable
-                      onPress={() =>
-                        router.push(`/workout/session?exercise=${exercise.id}`)
-                      }
-                      accessibilityRole="button"
-                      className="flex-1 flex-row items-center gap-3 active:opacity-80"
-                    >
-                      {complete ? (
-                        <View className="h-16 w-16 items-center justify-center rounded-xl bg-brand-soft">
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={28}
-                            color={colors.brand.DEFAULT}
-                          />
-                        </View>
-                      ) : (
-                        <View className="h-16 w-16 overflow-hidden rounded-xl bg-brand-soft">
-                          <ExerciseMedia exerciseId={exercise.id} size={64} />
-                        </View>
-                      )}
-
-                      <View className="flex-1">
-                        <Text className="text-base font-bold text-ink">
-                          {exercise.name}
-                        </Text>
-                        <Text className="mt-0.5 text-sm text-ink-muted">
-                          {done
-                            ? `${done.setsCompleted} dari ${exercise.sets} set selesai`
-                            : formatSets(exercise)}
-                        </Text>
+                    {complete ? (
+                      <View className="h-16 w-16 items-center justify-center rounded-xl bg-brand-soft">
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={28}
+                          color={colors.brand.DEFAULT}
+                        />
                       </View>
-                    </Pressable>
+                    ) : (
+                      <View className="h-16 w-16 overflow-hidden rounded-xl bg-brand-soft">
+                        <ExerciseMedia exerciseId={exercise.id} size={64} />
+                      </View>
+                    )}
 
-                    {/* Ubah set dan repetisi gerakan ini */}
-                    <Pressable
-                      onPress={() =>
-                        router.push(
-                          `/workout/configure?exercise=${exercise.id}`,
-                        )
-                      }
-                      hitSlop={8}
-                      className="p-2 active:opacity-60"
-                      accessibilityRole="button"
-                      accessibilityLabel={`Ubah set dan repetisi ${exercise.name}`}
-                    >
-                      <Ionicons
-                        name="create-outline"
-                        size={20}
-                        color={colors.ink.muted}
-                      />
-                    </Pressable>
-
-                    {/* Tombol Sampah untuk Menghapus */}
-                    <Pressable
-                      onPress={() => handleDeleteExercise(exercise)}
-                      hitSlop={8}
-                      className="p-2 active:opacity-60"
-                      accessibilityRole="button"
-                      accessibilityLabel={`Hapus gerakan ${exercise.name}`}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={20}
-                        color={colors.ink.subtle}
-                      />
-                    </Pressable>
+                    <View className="flex-1">
+                      <Text className="text-base font-bold text-ink">
+                        {exercise.name}
+                      </Text>
+                      <Text className="mt-0.5 text-sm text-ink-muted">
+                        {exercise.reps}
+                      </Text>
+                    </View>
                   </Card>
                 );
               })}
@@ -515,21 +489,6 @@ export default function WorkoutScreen() {
           </ScrollView>
 
           <View className="gap-2 px-5 pb-3 pt-1">
-            <Pressable
-              onPress={() => router.push("/workout/add")}
-              accessibilityRole="button"
-              className="flex-row items-center justify-center gap-1.5 py-1 active:opacity-70"
-            >
-              <Ionicons
-                name="add-circle-outline"
-                size={16}
-                color={colors.brand.DEFAULT}
-              />
-              <Text className="text-sm font-semibold text-brand-dark">
-                Tambahkan gerakan
-              </Text>
-            </Pressable>
-
             <View className="flex-row gap-3">
               <Button
                 variant="soft"
@@ -593,7 +552,7 @@ export default function WorkoutScreen() {
               icon="search"
               title="Temukan Program Latihan"
               subtitle="Latihan dengan program yang tersedia"
-              onPress={findProgramAlert}
+              onPress={() => router.push("/workout/templates")}
             />
 
             {/* Rekomendasi, sama seperti kartu di Home */}

@@ -106,6 +106,27 @@ export function WorkoutBuilderProvider({ children }) {
   /** Dipanggil setelah "Simpan Latihan" berhasil menulis semuanya ke rencana. */
   const clear = useCallback(() => setItems([]), []);
 
+  const loadFromPlan = useCallback((planExercises) => {
+    setItems(
+      planExercises.map((ex) => {
+        // Parse "12 repetisi" atau "20 menit"
+        const parts = ex.reps.split(" ");
+        const amount = parseInt(parts[0], 10) || 0;
+        const unit = parts[1] || "repetisi";
+
+        return {
+          key: `${ex.id || ex.exercise_id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          exerciseId: ex.id || ex.exercise_id, // depends on if it's joined data or raw db
+          name: ex.name,
+          category: ex.category || "unknown", // category isn't in plan usually, but we have name
+          sets: ex.sets || 3,
+          amount,
+          unit,
+        };
+      })
+    );
+  }, []);
+
   const totalSets = useMemo(
     () => items.reduce((sum, item) => sum + item.sets, 0),
     [items],
@@ -122,6 +143,7 @@ export function WorkoutBuilderProvider({ children }) {
       removeExercise,
       updateAmount,
       clear,
+      loadFromPlan,
       /** Bentuk siap tulis untuk `savePlanExercise` — reps digabung jadi satu teks. */
       toPlanRows: () =>
         items.map((item) => ({
@@ -140,6 +162,7 @@ export function WorkoutBuilderProvider({ children }) {
       removeExercise,
       updateAmount,
       clear,
+      loadFromPlan,
     ],
   );
 

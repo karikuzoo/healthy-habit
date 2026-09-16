@@ -176,3 +176,43 @@ export async function removePlanExercise(
     [timestamp, timestamp, userId, plannedOn, exerciseId],
   );
 }
+
+/** Mengganti semua rencana hari ini dengan template (soft delete yang lama, insert yang baru). */
+export async function replaceTodayPlanWithTemplate(
+  db,
+  userId,
+  templateExercises,
+  plannedOn = todayLocal(),
+) {
+  const timestamp = nowIso();
+
+  await db.withTransactionAsync(async () => {
+    // 1. Soft delete semua rencana hari ini
+    await db.runAsync(
+      `UPDATE workout_plan_exercises
+          SET deleted_at = ?, updated_at = ?, synced_at = NULL
+        WHERE user_id = ? AND planned_on = ? AND deleted_at IS NULL`,
+      [timestamp, timestamp, userId, plannedOn]
+    );
+
+    // 2. Insert gerakan dari template
+    for (let i = 0; i < templateExercises.length; i++) {
+      const ex = templateExercises[i];
+      await db.runAsync(
+        `INSERT INTO workout_plan_exercises
+           (id, user_id, planned_on, exercise_id, sets, reps, position, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          newId(),
+          userId,
+          plannedOn,
+          ex.exerciseId || ex.exercise_id,
+          ex.sets,
+          ex.reps,
+          i,
+          timestamp,
+        ],
+      );
+    }
+  });
+}
