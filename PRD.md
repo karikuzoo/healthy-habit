@@ -74,18 +74,100 @@ bukan sesuatu yang bisa disimpulkan dari kode atau desain:
 | ID | Requirement | Status |
 |---|---|---|
 | AUTH-1 | Layar Welcome sebagai titik masuk pertama | ✅ |
-| AUTH-2 | Masuk dengan email + kata sandi | 🚧 UI selesai, tanpa backend |
+| AUTH-2 | Masuk dengan email + kata sandi | 🚧 gerbang lokal: email + hash kata sandi dicocokkan ke akun terdaftar. Autentikasi sungguhan menunggu backend |
 | AUTH-3 | Registrasi 2 tahap dengan indikator langkah | ✅ |
 | AUTH-4 | Tahap 2 mengumpulkan aktivitas, tanggal lahir, jenis kelamin, tinggi, berat, tujuan | ✅ |
-| AUTH-5 | Persetujuan Syarat Layanan & Kebijakan Privasi wajib dicentang | 🚧 UI selesai, belum memblokir lanjut |
+| AUTH-5 | Persetujuan Syarat Layanan & Kebijakan Privasi wajib dicentang | ✅ tombol Lanjutkan menolak sampai dicentang |
 | AUTH-6 | Masuk dengan Google | ⬜ |
-| AUTH-7 | Lupa kata sandi | ⬜ |
+| AUTH-7 | Lupa kata sandi | 🚧 reset lokal lewat email terdaftar; email pemulihan menunggu backend |
 | AUTH-8 | Keluar akun dengan konfirmasi | ✅ |
 | AUTH-9 | Sesi bertahan setelah aplikasi ditutup | ⬜ status login masih di memori |
-| AUTH-10 | Pemilih tanggal lahir | ⬜ butuh dependensi date picker |
+| AUTH-10 | Pemilih tanggal lahir | ✅ kalender sendiri bergaya aplikasi, tanpa dependensi; bisa diubah lagi dari Edit profil |
 
-**Aturan validasi** ❓ — belum ditetapkan. Perlu keputusan: panjang minimum
-kata sandi, aturan format email, rentang wajar tinggi/berat, batas usia minimum.
+**Aturan validasi** (ditetapkan 16 Sep 2026, lihat `src/lib/validateAuth.js`)
+
+| Kolom | Aturan |
+|---|---|
+| Nama depan | Wajib. Nama belakang TIDAK — banyak orang Indonesia hanya punya satu nama |
+| Email | Harus punya bagian lokal, `@`, dan domain bertitik. Sengaja longgar: penentu sebenarnya email verifikasi, bukan regex |
+| Kata sandi (daftar) | Minimal 8 karakter, tanpa tuntutan huruf besar/angka/simbol |
+| Kata sandi (masuk) | Hanya wajib terisi — akun lama bisa dibuat dengan aturan berbeda, dan menolaknya saat masuk akan mengunci pemiliknya |
+| Konfirmasi | Harus sama persis; hanya diperiksa kalau kata sandinya sendiri sudah sah |
+
+Aturan komposisi (wajib simbol, angka, huruf besar) sengaja TIDAK dipakai:
+itu menggeser orang ke kata sandi pendek yang mudah ditebak tapi memenuhi
+syarat, dan menjauhkan dari frasa panjang yang jauh lebih kuat.
+
+**AUTH-2 — gerbang akun lokal** (ditetapkan 16 Sep 2026)
+
+Sebelumnya kata sandi dikumpulkan lalu dibuang, sehingga layar masuk tidak
+punya apa pun untuk dicocokkan: **email yang belum pernah didaftarkan pun
+bisa masuk**. Sekarang mendaftar menyimpan email beserta salt acak dan
+SHA-256 kata sandinya (migrasi V4), dan masuk mencocokkan keduanya.
+
+`registered_at` yang menentukan sebuah akun sudah terdaftar — bukan
+keberadaan baris `users`, karena baris itu selalu ada sejak peluncuran
+pertama hasil semaian `ensureUser`.
+
+Email yang tidak cocok dan kata sandi salah dilaporkan dengan pesan yang
+SAMA, supaya tidak memberi tahu penebak bahwa sebuah email terdaftar di
+perangkat itu.
+
+**Ini gerbang, BUKAN keamanan.** SHA-256 adalah digest cepat: siapa pun yang
+memegang berkas SQLite perangkat bisa mencoba jutaan tebakan per detik. Yang
+benar untuk kata sandi adalah KDF lambat (bcrypt/scrypt/argon2), dan
+`expo-crypto` tidak menyediakannya. Yang dicapai hanya: kata sandi tidak
+tergeletak sebagai teks polos, salt per akun membuat tabel pelangi umum tidak
+berguna, dan alur daftar→masuk jadi masuk akal saat aplikasi dicoba orang.
+Seluruh `src/lib/password.js` dibuang begitu Supabase masuk.
+
+**AUTH-7 — lupa kata sandi** (ditetapkan 16 Sep 2026)
+
+Masukkan email terdaftar, lalu setel kata sandi baru. **Verifikasinya hanya
+"tahu email yang terdaftar"** — tanpa server tidak ada tautan atau kode yang
+bisa dikirim, jadi tidak ada cara membuktikan siapa yang meminta. Batas itu
+dikatakan di layar, bukan disembunyikan.
+
+Yang membuatnya tetap masuk akal: jalan masuk tanpa verifikasi SUDAH ada
+sebelum ini — mendaftar ulang menimpa kredensial di baris pengguna yang sama
+tanpa menanyakan apa pun, dan seluruh catatan tetap utuh karena `user.id`
+tidak berubah. Layar ini tidak membuka apa pun yang belum terbuka; ia membuat
+jalannya jelas dan tidak merusak profil.
+
+Berbeda dari layar masuk, email yang tidak cocok DILAPORKAN apa adanya. Di
+sana penyamaran mencegah penebak tahu sebuah email terdaftar; di sini
+penyamaran tidak melindungi apa pun — perangkat hanya mengenal satu akun, dan
+pemegangnya bisa mengambil alih lewat daftar ulang — sementara pengguna yang
+salah ketik akan terjebak menebak.
+
+Reset memakai **salt baru**, bukan salt lama: hash yang tidak pernah berubah
+akan membocorkan bahwa kata sandinya juga tidak berubah.
+
+Bentuk alurnya sama dengan yang nanti dipakai saat Supabase masuk, jadi
+layarnya tidak terbuang — yang berganti hanya sumber verifikasinya.
+
+**Mendaftar dengan email berbeda = perangkat berpindah pemilik**
+(ditetapkan 16 Sep 2026)
+
+Perangkat hanya mengenal SATU baris pengguna, dan `user.id`-nya tidak
+berubah saat mendaftar. Akibatnya akun baru mewarisi seluruh isi akun
+sebelumnya — foto, tinggi, berat, program, sampai riwayat makanan dan latihan.
+
+Email yang dipakai sekarang menentukan maksudnya:
+
+| Email saat daftar | Artinya | Yang terjadi |
+|---|---|---|
+| Sama dengan akun terdaftar | Pemiliknya mengambil alih akunnya sendiri (mis. lupa kata sandi) | Profil dan seluruh catatan dipertahankan |
+| Berbeda | Perangkat berpindah pemilik | Profil kembali ke awal, catatan pemilik lama disingkirkan |
+
+Penyingkirannya memakai **soft delete**, sama seperti seluruh penghapusan lain
+di aplikasi ini: barisnya tetap ada supaya bisa disinkronkan nanti, dan kalau
+ternyata salah orang yang mendaftar, datanya masih bisa diselamatkan dari
+database. Berkas foto pemilik lama dihapus SESUDAH baris profilnya berhasil
+ditulis.
+
+**Rentang tinggi/berat dan batas usia minimum masih terbuka** ❓ — belum
+dibutuhkan sampai tahap 2 pendaftaran divalidasi.
 
 ### 3.2 Dashboard (Home)
 
@@ -273,7 +355,7 @@ palang. Kebutuhan alat ditandai di UI lewat `equipmentLabel()`.
 | PROF-6 | Perubahan profil bertahan setelah aplikasi ditutup | ✅ |
 | PROF-7 | Ganti satuan metrik/imperial | 🚧 nilai berubah, angka belum dikonversi |
 | PROF-8 | Preferensi notifikasi | ⬜ |
-| PROF-9 | Ganti foto profil | ⬜ butuh image picker |
+| PROF-9 | Ganti foto profil | ✅ kamera atau galeri, disalin ke direktori dokumen; tampil di Profil & Dashboard |
 
 ---
 
@@ -368,7 +450,7 @@ akan membuat ON DELETE CASCADE mati pada peluncuran kedua.
 | NFR-7 | Aman terhadap area notch/home indicator | ✅ via `Screen` |
 | NFR-8 | Bar & ring progres tidak meluber saat data melebihi target | ✅ dijepit 0..1 |
 | NFR-9 | Data kesehatan terenkripsi saat disimpan | ⬜ SQLCipher butuh prebuild |
-| NFR-10 | Uji otomatis | 🚧 34 uji `node:test` untuk logika murni & query SQLite; komponen dan bagian workout belum |
+| NFR-10 | Uji otomatis | 🚧 74 uji `node:test` untuk logika murni & query SQLite; komponen dan bagian workout belum |
 
 **NFR-10 — cara uji dijalankan** (ditetapkan 15 Sep 2026)
 
@@ -553,7 +635,7 @@ Memakai skala Tailwind bawaan, ditambah ukuran khusus:
 ### 8.1 Sudah selesai
 
 - 25 rute, 17 komponen bersama, token desain tunggal
-- **42 dari 55 requirement fungsional selesai** (per 12 Sep 2026),
+- **45 dari 55 requirement fungsional selesai** (per 16 Sep 2026),
   di luar 10 NFR yang 6 di antaranya selesai
 - Target kalori & makro terhitung dari data tubuh
 - SQLite terpasang dengan schema siap-sinkron; profil sudah persisten
@@ -570,8 +652,6 @@ menurut apa yang menghalanginya.
 |---|---|
 | Auth & sinkronisasi (AUTH-2, AUTH-6, AUTH-9) | Perlu project Supabase; tidak bisa dibuat dari sisi pengembang |
 | Lisensi katalog makanan | Asal CSV belum terverifikasi; wajib dipastikan sebelum rilis komersial |
-| PROF-9 foto profil | Butuh image picker |
-| AUTH-10 tanggal lahir | Butuh dependensi date picker |
 
 **Bisa dikerjakan sekarang, berdampak besar**
 
@@ -596,6 +676,9 @@ menurut apa yang menghalanginya.
 | Data contoh | `seedDemoDayIfEmpty` & `seedDemoWeekIfEmpty` masih menyemai hari/minggu contoh pada peluncuran pertama; hapus bila tidak diperlukan lagi |
 | Judul bagian berbahasa Inggris | "Active Program", "Settings", "Weekly Trend" — perlu keputusan: terjemahkan atau pertahankan |
 | Konversi satuan | PROF-7 mengubah label saja, angka belum dikonversi |
+| Perangkat hanya mengenal satu akun | Satu baris `users` dipakai ulang, jadi berganti akun berarti menyingkirkan data pemilik lama. Akun ganda butuh model banyak baris — menyusul bersama autentikasi Supabase |
+| Foto profil tidak ikut sinkron | `avatar_uri` menyimpan jalur berkas lokal, yang tidak berarti apa-apa di perangkat lain. Saat sinkronisasi masuk, fotonya perlu object storage (mis. Supabase Storage) |
+| Hash kata sandi lokal memakai SHA-256 | Digest cepat, bukan KDF. Murah ditembus kalau berkas database dipegang orang. Hilang begitu autentikasi pindah ke Supabase |
 | Akurasi langkah di Android | Pedometer butuh development build (Expo Go tidak punya izinnya). Bahkan di dev build, langkah sebelum aplikasi pertama dibuka dan selagi prosesnya mati tidak terhitung — perlu Health Connect untuk menutupnya |
 | Uji komponen belum ada | `node:test` tidak bisa merender React Native. Layar masih diverifikasi dengan menjalankan aplikasi — ditunda sampai redesign selesai supaya tidak menguji tata letak yang akan diganti |
 | Bagian workout belum diuji | Sedang dikerjakan Rivaldy; `src/data/workout.js` dan `src/db/workoutPlan.js` menyusul setelah stabil |
@@ -627,3 +710,11 @@ menurut apa yang menghalanginya.
 | 12 Sep 2026 | Input langkah manual disediakan sebagai cadangan pedometer | Expo Go Android tidak punya izin `ACTIVITY_RECOGNITION`; tanpa cadangan, fitur ini mati di lingkungan pengembangan yang dipakai sehari-hari |
 | 15 Sep 2026 | Uji otomatis memakai `node:test`, bukan jest-expo | Yang paling berisiko bergeser adalah logika & query, bukan tampilan; runner bawaan tidak menambah dependensi dan tidak menguji tata letak yang sebentar lagi diganti |
 | 15 Sep 2026 | Perbedaan Metro-vs-Node ditangani loader uji, bukan dengan mengubah kode aplikasi | Menyuntikkan pembuat id atau memindahkan impor JSON akan merumitkan kode produksi demi kebutuhan uji — urutan yang terbalik |
+| 16 Sep 2026 | Kata sandi minimal 8 karakter, tanpa tuntutan komposisi | Aturan komposisi menggeser orang ke kata sandi pendek yang mudah ditebak; panjang yang menentukan kekuatannya |
+| 16 Sep 2026 | Kata sandi disimpan sebagai salt + SHA-256 untuk gerbang lokal, bukan dibuang | Tanpa apa pun yang tersimpan, layar masuk menerima email yang belum pernah didaftarkan. Disebut apa adanya sebagai gerbang, bukan keamanan — dibuang saat Supabase masuk |
+| 16 Sep 2026 | Foto profil disalin dari cache ke direktori dokumen | `expo-image-picker` mengembalikan berkas di cache, yang boleh dihapus sistem kapan saja — URI-nya akan menunjuk ke berkas yang sudah tidak ada |
+| 16 Sep 2026 | Nama berkas foto memuat timestamp | Dengan nama tetap, komponen gambar menampilkan foto lama dari cache-nya sendiri meski isi berkasnya sudah diganti |
+| 16 Sep 2026 | Lupa kata sandi diverifikasi hanya dengan email terdaftar | Tanpa server tidak ada cara membuktikan peminta; dan daftar ulang sudah membuka jalan yang sama tanpa verifikasi apa pun |
+| 16 Sep 2026 | Mendaftar dengan email berbeda mengosongkan profil dan catatan pemilik lama | Tanpa itu akun baru mewarisi foto, ukuran tubuh, dan seluruh riwayat akun sebelumnya, karena `user.id` tidak berubah |
+| 16 Sep 2026 | Tanggal disimpan lewat `toIsoDate`, bukan `toISOString()` | `toISOString()` mengonversi ke UTC lebih dulu; tanggal yang dipilih di WIB bisa tersimpan mundur satu hari |
+| 16 Sep 2026 | Kalender tanggal dibuat sendiri, bukan memakai pemilih bawaan sistem | Pemilih bawaan digambar Android/iOS sehingga tidak bisa disamakan dengan palet aplikasi, dan tampil berbeda antar platform. date-fns sudah ada, jadi tidak perlu dependensi baru |
