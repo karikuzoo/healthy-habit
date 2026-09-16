@@ -586,7 +586,7 @@ export default function WorkoutScreen() {
               icon="play"
               title="Mulai Latihan"
               subtitle="Buat menu latihanmu sendiri"
-              onPress={() => router.push("/workout/add")}
+              onPress={() => router.push("/workout/type")}
             />
 
             <StartOption

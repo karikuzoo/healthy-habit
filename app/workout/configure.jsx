@@ -1,8 +1,14 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
 import {
   Button,
   Card,
@@ -12,17 +18,18 @@ import {
   ScreenHeader,
   Segmented,
   Stepper,
-} from '../../src/components';
-import { colors } from '../../src/theme/colors';
+} from "../../src/components";
+import { colors } from "../../src/theme/colors";
 import {
   equipmentLabel,
   formatReps,
   parseReps,
+  repRanges,
   repUnits,
   resolveExercise,
-} from '../../src/data/workout';
-import { getPlanExercise, savePlanExercise } from '../../src/db/workoutPlan';
-import { useUser } from '../../src/context/UserContext';
+} from "../../src/data/workout";
+import { getPlanExercise, savePlanExercise } from "../../src/db/workoutPlan";
+import { useUser } from "../../src/context/UserContext";
 
 /**
  * Menyetel satu gerakan sebelum masuk ke rencana hari ini.
@@ -35,13 +42,13 @@ import { useUser } from '../../src/context/UserContext';
  * apakah gerakannya sudah ada di rencana. Dengan begitu menambahkan gerakan
  * yang sudah ada tidak berakhir sebagai gerakan kembar, melainkan membuka
  * resep yang sedang berlaku.
+ *
+ * Alur "Mulai Latihan" (Jenis Workout -> Jenis Otot -> daftar gerakan) tidak
+ * lagi lewat sini — gerakan langsung masuk staging dengan resep bawaan, dan
+ * repetisinya diatur inline di layar "Rincian Pemilihan gerakan". Layar ini
+ * sekarang hanya dipakai untuk MENGUBAH gerakan yang sudah ada di rencana
+ * (ikon pensil di tab Workout).
  */
-
-/** Batas per satuan — 300 detik cukup untuk plank terlama yang masuk akal. */
-const REPS_RANGE = {
-  repetisi: { min: 1, max: 100, step: 1, label: 'Repetisi per set', hint: '1-100' },
-  detik: { min: 5, max: 300, step: 5, label: 'Durasi per set (detik)', hint: '5-300' },
-};
 
 export default function ConfigureExerciseScreen() {
   const db = useSQLiteContext();
@@ -52,9 +59,9 @@ export default function ConfigureExerciseScreen() {
 
   const [ready, setReady] = useState(false);
   const [inPlan, setInPlan] = useState(false);
-  const [sets, setSets] = useState('3');
-  const [amount, setAmount] = useState('12');
-  const [unit, setUnit] = useState('repetisi');
+  const [sets, setSets] = useState("3");
+  const [amount, setAmount] = useState("12");
+  const [unit, setUnit] = useState("repetisi");
   const [saving, setSaving] = useState(false);
 
   // Resep yang sedang berlaku jadi nilai awal; gerakan baru memakai bawaan
@@ -85,14 +92,14 @@ export default function ConfigureExerciseScreen() {
     };
   }, [db, user.id, exercise?.id]);
 
-  const range = REPS_RANGE[unit];
+  const range = repRanges[unit];
 
   // Ganti satuan berarti ganti rentang: 12 repetisi tidak masuk akal sebagai
   // 12 detik, jadi angkanya dijepit ke rentang satuan yang baru.
   const changeUnit = useCallback((next) => {
     setUnit(next);
     setAmount((current) => {
-      const { min, max } = REPS_RANGE[next];
+      const { min, max } = repRanges[next];
       const value = Number(current);
       if (!Number.isFinite(value)) return String(min);
       return String(Math.min(Math.max(value, min), max));
@@ -104,8 +111,14 @@ export default function ConfigureExerciseScreen() {
       <Screen>
         <ScreenHeader title="Atur gerakan" />
         <View className="items-center gap-2 px-5 pt-10">
-          <Ionicons name="barbell-outline" size={28} color={colors.ink.subtle} />
-          <Text className="text-sm text-ink-muted">Gerakan tidak ditemukan.</Text>
+          <Ionicons
+            name="barbell-outline"
+            size={28}
+            color={colors.ink.subtle}
+          />
+          <Text className="text-sm text-ink-muted">
+            Gerakan tidak ditemukan.
+          </Text>
         </View>
       </Screen>
     );
@@ -147,15 +160,15 @@ export default function ConfigureExerciseScreen() {
      * sebelum `enterApp()` ada, layar Welcome masih tertinggal di bawahnya
      * dan `dismissAll` justru memulangkan pengguna ke sana.
      */
-    router.dismissTo('/(tabs)/workout');
+    router.dismissTo("/(tabs)/workout");
   };
 
   return (
     <Screen>
-      <ScreenHeader title={inPlan ? 'Ubah gerakan' : 'Atur gerakan'} />
+      <ScreenHeader title={inPlan ? "Ubah gerakan" : "Atur gerakan"} />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
         <ScrollView
@@ -164,9 +177,15 @@ export default function ConfigureExerciseScreen() {
         >
           <View className="gap-5 px-5 pb-8 pt-2">
             <Card className="items-center gap-2 p-5">
-              <ExerciseMedia exerciseId={exercise.id} size={120} rounded="rounded-2xl" />
+              <ExerciseMedia
+                exerciseId={exercise.id}
+                size={120}
+                rounded="rounded-2xl"
+              />
 
-              <Text className="mt-1 text-xl font-bold text-ink">{exercise.name}</Text>
+              <Text className="mt-1 text-xl font-bold text-ink">
+                {exercise.name}
+              </Text>
 
               {equipmentLabel(exercise) ? (
                 <View className="flex-row items-center gap-1.5 rounded-full bg-steps-soft px-3 py-1">
@@ -225,13 +244,13 @@ export default function ConfigureExerciseScreen() {
             <Button
               label={
                 saving
-                  ? 'Menyimpan...'
+                  ? "Menyimpan..."
                   : inPlan
-                    ? 'Simpan perubahan'
-                    : 'Tambahkan ke rencana'
+                    ? "Simpan perubahan"
+                    : "Tambahkan ke rencana"
               }
               onPress={handleSave}
-              className={saving ? 'opacity-50' : ''}
+              className={saving ? "opacity-50" : ""}
             />
 
             {inPlan ? (

@@ -22,21 +22,36 @@
 /** Label alat untuk ditampilkan; null berarti tanpa alat. */
 export const equipmentLabels = {
   bodyweight: null,
-  bar: 'Perlu palang',
-  dumbbell: 'Perlu dumbbell',
-  kettlebell: 'Perlu kettlebell',
-  barbell: 'Perlu barbel',
-  machine: 'Perlu alat gym',
-  cable: 'Perlu alat gym',
+  bar: "Perlu palang",
+  dumbbell: "Perlu dumbbell",
+  kettlebell: "Perlu kettlebell",
+  barbell: "Perlu barbel",
+  machine: "Perlu alat gym",
+  cable: "Perlu alat gym",
 };
 
 export const exerciseCategories = [
-  { id: 'kaki', name: 'Kaki' },
-  { id: 'dada', name: 'Dada' },
-  { id: 'punggung', name: 'Punggung' },
-  { id: 'inti', name: 'Inti' },
-  { id: 'lengan', name: 'Lengan' },
-  { id: 'bahu', name: 'Bahu' },
+  { id: "kaki", name: "Kaki" },
+  { id: "dada", name: "Dada" },
+  { id: "punggung", name: "Punggung" },
+  { id: "inti", name: "Inti" },
+  { id: "lengan", name: "Lengan" },
+  { id: "bahu", name: "Bahu" },
+  { id: "cardio", name: "Cardio" },
+];
+
+/**
+ * Jenis workout — langkah pertama alur "Mulai Latihan".
+ *
+ * `weight-lifting` dan `no-equipment` sama-sama lanjut ke layar "Jenis Otot"
+ * (`exercisesForWorkout` menyaring katalog per alat begitu ototnya dipilih).
+ * `cardio` melompat langsung ke daftar gerakan — gerakan kardio tidak
+ * dikelompokkan per otot.
+ */
+export const workoutTypes = [
+  { id: "weight-lifting", name: "Weight Lifting" },
+  { id: "no-equipment", name: "No Equipment" },
+  { id: "cardio", name: "Cardio" },
 ];
 
 /**
@@ -49,67 +64,229 @@ export const exerciseCategories = [
  */
 export const exercises = {
   // ---- Kaki ----
-  'bodyweight-squat': { name: 'Squat', category: 'kaki', equipment: 'bodyweight' },
-  'walking-lunge': { name: 'Walking lunge', category: 'kaki', equipment: 'bodyweight' },
-  'glute-bridge': { name: 'Glute bridge', category: 'kaki', equipment: 'bodyweight' },
-  'single-leg-glute-bridge': { name: 'Glute bridge satu kaki', category: 'kaki', equipment: 'bodyweight' },
-  'step-up': { name: 'Step-up', category: 'kaki', equipment: 'bodyweight' },
-  'glute-kickback': { name: 'Glute kickback', category: 'kaki', equipment: 'bodyweight' },
-  'jump-squat': { name: 'Jump squat', category: 'kaki', equipment: 'bodyweight' },
-  'goblet-squat': { name: 'Goblet squat', category: 'kaki', equipment: 'kettlebell' },
-  'barbell-squat': { name: 'Barbell squat', category: 'kaki', equipment: 'barbell' },
-  'leg-press': { name: 'Leg press', category: 'kaki', equipment: 'machine' },
-  'calf-raise': { name: 'Calf raise', category: 'kaki', equipment: 'machine' },
+  "bodyweight-squat": {
+    name: "Squat",
+    category: "kaki",
+    equipment: "bodyweight",
+  },
+  "walking-lunge": {
+    name: "Walking lunge",
+    category: "kaki",
+    equipment: "bodyweight",
+  },
+  "glute-bridge": {
+    name: "Glute bridge",
+    category: "kaki",
+    equipment: "bodyweight",
+  },
+  "single-leg-glute-bridge": {
+    name: "Glute bridge satu kaki",
+    category: "kaki",
+    equipment: "bodyweight",
+  },
+  "step-up": { name: "Step-up", category: "kaki", equipment: "bodyweight" },
+  "glute-kickback": {
+    name: "Glute kickback",
+    category: "kaki",
+    equipment: "bodyweight",
+  },
+  "jump-squat": {
+    name: "Jump squat",
+    category: "kaki",
+    equipment: "bodyweight",
+  },
+  "goblet-squat": {
+    name: "Goblet squat",
+    category: "kaki",
+    equipment: "kettlebell",
+  },
+  "barbell-squat": {
+    name: "Barbell squat",
+    category: "kaki",
+    equipment: "barbell",
+  },
+  "leg-press": { name: "Leg press", category: "kaki", equipment: "machine" },
+  "calf-raise": { name: "Calf raise", category: "kaki", equipment: "machine" },
 
   // ---- Dada ----
-  'push-up': { name: 'Push-up', category: 'dada', equipment: 'bodyweight' },
-  'incline-push-up': { name: 'Incline push-up', category: 'dada', equipment: 'bodyweight' },
-  'decline-push-up': { name: 'Decline push-up', category: 'dada', equipment: 'bodyweight' },
-  'wide-push-up': { name: 'Push-up lebar', category: 'dada', equipment: 'bodyweight' },
-  'feet-elevated-push-up': { name: 'Push-up kaki naik', category: 'dada', equipment: 'bodyweight' },
-  'push-up-side-plank': { name: 'Push-up ke side plank', category: 'dada', equipment: 'bodyweight' },
-  'bench-press': { name: 'Bench press', category: 'dada', equipment: 'barbell' },
-  'chest-fly': { name: 'Chest fly', category: 'dada', equipment: 'dumbbell' },
+  "push-up": { name: "Push-up", category: "dada", equipment: "bodyweight" },
+  "incline-push-up": {
+    name: "Incline push-up",
+    category: "dada",
+    equipment: "bodyweight",
+  },
+  "decline-push-up": {
+    name: "Decline push-up",
+    category: "dada",
+    equipment: "bodyweight",
+  },
+  "wide-push-up": {
+    name: "Push-up lebar",
+    category: "dada",
+    equipment: "bodyweight",
+  },
+  "feet-elevated-push-up": {
+    name: "Push-up kaki naik",
+    category: "dada",
+    equipment: "bodyweight",
+  },
+  "push-up-side-plank": {
+    name: "Push-up ke side plank",
+    category: "dada",
+    equipment: "bodyweight",
+  },
+  "bench-press": {
+    name: "Bench press",
+    category: "dada",
+    equipment: "barbell",
+  },
+  "chest-fly": { name: "Chest fly", category: "dada", equipment: "dumbbell" },
 
   // ---- Punggung ----
-  'pull-up': { name: 'Pull-up', category: 'punggung', equipment: 'bar' },
-  'chin-up': { name: 'Chin-up', category: 'punggung', equipment: 'bar' },
-  'inverted-row': { name: 'Inverted row', category: 'punggung', equipment: 'bar' },
-  hyperextension: { name: 'Hyperextension', category: 'punggung', equipment: 'bodyweight' },
-  'dumbbell-row': { name: 'Dumbbell row', category: 'punggung', equipment: 'dumbbell' },
-  'lat-pulldown': { name: 'Lat pulldown', category: 'punggung', equipment: 'cable' },
-  'seated-row': { name: 'Seated row', category: 'punggung', equipment: 'cable' },
+  "pull-up": { name: "Pull-up", category: "punggung", equipment: "bar" },
+  "chin-up": { name: "Chin-up", category: "punggung", equipment: "bar" },
+  "inverted-row": {
+    name: "Inverted row",
+    category: "punggung",
+    equipment: "bar",
+  },
+  hyperextension: {
+    name: "Hyperextension",
+    category: "punggung",
+    equipment: "bodyweight",
+  },
+  "dumbbell-row": {
+    name: "Dumbbell row",
+    category: "punggung",
+    equipment: "dumbbell",
+  },
+  "lat-pulldown": {
+    name: "Lat pulldown",
+    category: "punggung",
+    equipment: "cable",
+  },
+  "seated-row": {
+    name: "Seated row",
+    category: "punggung",
+    equipment: "cable",
+  },
 
   // ---- Inti ----
-  plank: { name: 'Plank', category: 'inti', equipment: 'bodyweight' },
-  'side-plank': { name: 'Side plank', category: 'inti', equipment: 'bodyweight' },
-  crunch: { name: 'Crunch', category: 'inti', equipment: 'bodyweight' },
-  'sit-up': { name: 'Sit-up', category: 'inti', equipment: 'bodyweight' },
-  'reverse-crunch': { name: 'Reverse crunch', category: 'inti', equipment: 'bodyweight' },
-  'cross-body-crunch': { name: 'Cross-body crunch', category: 'inti', equipment: 'bodyweight' },
-  'oblique-crunch': { name: 'Oblique crunch', category: 'inti', equipment: 'bodyweight' },
-  'dead-bug': { name: 'Dead bug', category: 'inti', equipment: 'bodyweight' },
-  'bicycle-crunch': { name: 'Bicycle crunch', category: 'inti', equipment: 'bodyweight' },
-  'leg-raise': { name: 'Leg raise', category: 'inti', equipment: 'bodyweight' },
-  'russian-twist': { name: 'Russian twist', category: 'inti', equipment: 'bodyweight' },
+  plank: { name: "Plank", category: "inti", equipment: "bodyweight" },
+  "side-plank": {
+    name: "Side plank",
+    category: "inti",
+    equipment: "bodyweight",
+  },
+  crunch: { name: "Crunch", category: "inti", equipment: "bodyweight" },
+  "sit-up": { name: "Sit-up", category: "inti", equipment: "bodyweight" },
+  "reverse-crunch": {
+    name: "Reverse crunch",
+    category: "inti",
+    equipment: "bodyweight",
+  },
+  "cross-body-crunch": {
+    name: "Cross-body crunch",
+    category: "inti",
+    equipment: "bodyweight",
+  },
+  "oblique-crunch": {
+    name: "Oblique crunch",
+    category: "inti",
+    equipment: "bodyweight",
+  },
+  "dead-bug": { name: "Dead bug", category: "inti", equipment: "bodyweight" },
+  "bicycle-crunch": {
+    name: "Bicycle crunch",
+    category: "inti",
+    equipment: "bodyweight",
+  },
+  "leg-raise": { name: "Leg raise", category: "inti", equipment: "bodyweight" },
+  "russian-twist": {
+    name: "Russian twist",
+    category: "inti",
+    equipment: "bodyweight",
+  },
 
   // ---- Lengan ----
-  'bench-dips': { name: 'Bench dips', category: 'lengan', equipment: 'bodyweight' },
-  'tricep-dips': { name: 'Tricep dips', category: 'lengan', equipment: 'bodyweight' },
-  'body-tricep-press': { name: 'Body tricep press', category: 'lengan', equipment: 'bodyweight' },
-  'towel-tricep-extension': { name: 'Tricep extension handuk', category: 'lengan', equipment: 'bodyweight' },
+  "bench-dips": {
+    name: "Bench dips",
+    category: "lengan",
+    equipment: "bodyweight",
+  },
+  "tricep-dips": {
+    name: "Tricep dips",
+    category: "lengan",
+    equipment: "bodyweight",
+  },
+  "body-tricep-press": {
+    name: "Body tricep press",
+    category: "lengan",
+    equipment: "bodyweight",
+  },
+  "towel-tricep-extension": {
+    name: "Tricep extension handuk",
+    category: "lengan",
+    equipment: "bodyweight",
+  },
   // Bisep tidak punya gerakan tanpa alat: melatihnya butuh tarikan berbeban
-  'dumbbell-curl': { name: 'Dumbbell curl', category: 'lengan', equipment: 'dumbbell' },
-  'hammer-curl': { name: 'Hammer curl', category: 'lengan', equipment: 'dumbbell' },
+  "dumbbell-curl": {
+    name: "Dumbbell curl",
+    category: "lengan",
+    equipment: "dumbbell",
+  },
+  "hammer-curl": {
+    name: "Hammer curl",
+    category: "lengan",
+    equipment: "dumbbell",
+  },
 
   // ---- Bahu ----
   // Seluruh kategori ini memakai dumbbell: sumber datanya tidak memuat satu pun
   // gerakan kekuatan bahu tanpa alat (yang ada hanya peregangan)
-  'shoulder-press': { name: 'Shoulder press', category: 'bahu', equipment: 'dumbbell' },
-  'lateral-raise': { name: 'Lateral raise', category: 'bahu', equipment: 'dumbbell' },
-  'front-raise': { name: 'Front raise', category: 'bahu', equipment: 'dumbbell' },
-  'rear-delt-raise': { name: 'Rear delt raise', category: 'bahu', equipment: 'dumbbell' },
-  'face-pull': { name: 'Face pull', category: 'bahu', equipment: 'cable' },
+  "shoulder-press": {
+    name: "Shoulder press",
+    category: "bahu",
+    equipment: "dumbbell",
+  },
+  "lateral-raise": {
+    name: "Lateral raise",
+    category: "bahu",
+    equipment: "dumbbell",
+  },
+  "front-raise": {
+    name: "Front raise",
+    category: "bahu",
+    equipment: "dumbbell",
+  },
+  "rear-delt-raise": {
+    name: "Rear delt raise",
+    category: "bahu",
+    equipment: "dumbbell",
+  },
+  "face-pull": { name: "Face pull", category: "bahu", equipment: "cable" },
+
+  // ---- Cardio ----
+  // Tidak dikelompokkan per otot — dipilih langsung dari "Jenis Workout".
+  // Belum ada foto peraga untuk gerakan-gerakan ini; ExerciseMedia otomatis
+  // menampilkan ikon placeholder sampai fotonya ditambahkan.
+  "shadow-boxing": {
+    name: "Shadow Boxing",
+    category: "cardio",
+    equipment: "bodyweight",
+  },
+  walking: { name: "Walking", category: "cardio", equipment: "bodyweight" },
+  "jump-rope": {
+    name: "Jump Rope",
+    category: "cardio",
+    equipment: "bodyweight",
+  },
+  "rowing-machine": {
+    name: "Rowing Machine",
+    category: "cardio",
+    equipment: "machine",
+  },
+  running: { name: "Running", category: "cardio", equipment: "bodyweight" },
 };
 
 /**
@@ -125,24 +302,24 @@ export const exercises = {
  * yang menskalakan keduanya per gerakan.
  */
 export const todayWorkout = {
-  level: 'Pemula',
+  level: "Pemula",
   durationMinutes: 28,
-  intensity: 'Intensitas sedang',
+  intensity: "Intensitas sedang",
   restSeconds: 45,
   estimatedCalories: 184,
   plan: [
-    { id: 'bodyweight-squat', sets: 3, reps: '12 repetisi' },
-    { id: 'incline-push-up', sets: 3, reps: '10 repetisi' },
-    { id: 'dead-bug', sets: 3, reps: '12 repetisi' },
-    { id: 'glute-bridge', sets: 3, reps: '15 repetisi' },
-    { id: 'plank', sets: 3, reps: '30 detik' },
-    { id: 'bench-dips', sets: 3, reps: '10 repetisi' },
-    { id: 'walking-lunge', sets: 3, reps: '12 repetisi' },
+    { id: "bodyweight-squat", sets: 3, reps: "12 repetisi" },
+    { id: "incline-push-up", sets: 3, reps: "10 repetisi" },
+    { id: "dead-bug", sets: 3, reps: "12 repetisi" },
+    { id: "glute-bridge", sets: 3, reps: "15 repetisi" },
+    { id: "plank", sets: 3, reps: "30 detik" },
+    { id: "bench-dips", sets: 3, reps: "10 repetisi" },
+    { id: "walking-lunge", sets: 3, reps: "12 repetisi" },
   ],
 };
 
 /** Resep bawaan untuk gerakan katalog yang belum masuk rencana. */
-const DEFAULT_PRESCRIPTION = { sets: 3, reps: '12 repetisi' };
+const DEFAULT_PRESCRIPTION = { sets: 3, reps: "12 repetisi" };
 
 /**
  * Menggabungkan definisi gerakan dengan resepnya menjadi satu objek utuh.
@@ -184,9 +361,35 @@ export function exercisesInCategory(categoryId) {
     .map(([id]) => resolveExercise(id));
 }
 
+/**
+ * Gerakan katalog untuk satu kategori, disaring lagi berdasarkan jenis
+ * workout yang dipilih di layar "Jenis Workout":
+ *
+ * - `cardio`        mengabaikan `categoryId` — kardio tidak dikelompokkan
+ *                    per otot, jadi langsung semua gerakan berkategori cardio.
+ * - `no-equipment`  hanya gerakan `equipment: 'bodyweight'`.
+ * - `weight-lifting` kebalikannya — gerakan yang BUTUH alat.
+ * - lainnya/kosong  tidak menyaring alat sama sekali (dipakai alur lama
+ *                    "Tambahkan gerakan" yang tidak melalui pemilihan jenis).
+ */
+export function exercisesForWorkout(categoryId, workoutType) {
+  return Object.entries(exercises)
+    .filter(([, definition]) => {
+      if (workoutType === "cardio") return definition.category === "cardio";
+      if (definition.category !== categoryId) return false;
+      if (workoutType === "no-equipment")
+        return definition.equipment === "bodyweight";
+      if (workoutType === "weight-lifting")
+        return definition.equipment !== "bodyweight";
+      return true;
+    })
+    .map(([id]) => resolveExercise(id));
+}
+
 /** Jumlah gerakan per kategori, dipakai layar pemilih kategori. */
 export function categoryCount(categoryId) {
-  return Object.values(exercises).filter((e) => e.category === categoryId).length;
+  return Object.values(exercises).filter((e) => e.category === categoryId)
+    .length;
 }
 
 /** Label alat, atau null kalau gerakannya tanpa alat. */
@@ -208,24 +411,77 @@ export function formatSets(exercise) {
  * supaya layar penyetelan bisa menaik-turunkannya.
  */
 export const repUnits = [
-  { value: 'repetisi', label: 'Repetisi' },
-  { value: 'detik', label: 'Detik' },
+  { value: "repetisi", label: "Repetisi" },
+  { value: "detik", label: "Detik" },
+  { value: "menit", label: "Menit" },
 ];
 
-const DEFAULT_REPS = { amount: 12, unit: 'repetisi' };
+/**
+ * Batas nilai per satuan reps — sumber tunggal dipakai layar "Atur gerakan"
+ * maupun stepper inline di "Rincian Pemilihan gerakan", supaya keduanya
+ * tidak diam-diam berbeda rentang.
+ *
+ * 300 detik cukup untuk plank terlama yang masuk akal; 180 menit lebih dari
+ * cukup untuk sesi kardio mana pun.
+ */
+export const repRanges = {
+  repetisi: {
+    min: 1,
+    max: 100,
+    step: 1,
+    label: "Repetisi per set",
+    hint: "1-100",
+  },
+  detik: {
+    min: 5,
+    max: 300,
+    step: 5,
+    label: "Durasi per set (detik)",
+    hint: "5-300",
+  },
+  menit: {
+    min: 1,
+    max: 180,
+    step: 1,
+    label: "Durasi per set (menit)",
+    hint: "1-180",
+  },
+};
 
-/** "30 detik" -> { amount: 30, unit: 'detik' } */
+const DEFAULT_REPS = { amount: 12, unit: "repetisi" };
+
+/** "30 detik" -> { amount: 30, unit: 'detik' }; "20 menit" -> { amount: 20, unit: 'menit' } */
 export function parseReps(reps) {
-  const match = /([0-9]+)[ ]*([a-zA-Z]+)/.exec(String(reps ?? ''));
+  const match = /([0-9]+)[ ]*([a-zA-Z]+)/.exec(String(reps ?? ""));
   if (!match) return { ...DEFAULT_REPS };
 
-  const unit = match[2].toLowerCase().startsWith('detik') ? 'detik' : 'repetisi';
+  const rawUnit = match[2].toLowerCase();
+  const unit = rawUnit.startsWith("detik")
+    ? "detik"
+    : rawUnit.startsWith("menit")
+      ? "menit"
+      : "repetisi";
   return { amount: Number(match[1]), unit };
 }
 
 /** Kebalikan `parseReps`. */
 export function formatReps(amount, unit) {
-  return `${amount} ${unit === 'detik' ? 'detik' : 'repetisi'}`;
+  const label =
+    unit === "detik" ? "detik" : unit === "menit" ? "menit" : "repetisi";
+  return `${amount} ${label}`;
+}
+
+/**
+ * Satuan & jumlah bawaan untuk gerakan yang BELUM punya resep — dipakai saat
+ * gerakan pertama kali dipilih di alur "Mulai Latihan". Cardio diukur dalam
+ * menit; sisanya tetap repetisi seperti sebelumnya.
+ */
+export function defaultUnitFor(exercise) {
+  return exercise?.category === "cardio" ? "menit" : "repetisi";
+}
+
+export function defaultAmountFor(exercise) {
+  return exercise?.category === "cardio" ? 20 : 12;
 }
 
 /**
