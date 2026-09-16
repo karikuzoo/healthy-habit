@@ -58,17 +58,25 @@ function wrap(raw) {
   return db;
 }
 
-/** Database kosong yang sudah dimigrasi, plus satu pengguna siap pakai. */
-export async function createTestDb({ userId = 'user-uji' } = {}) {
+/**
+ * Database kosong yang sudah dimigrasi, plus satu pengguna siap pakai.
+ *
+ * `seedUser: false` mengembalikan database TANPA baris pengguna sama sekali —
+ * dipakai uji yang perlu menyaksikan `ensureUser` menyemai profil bawaannya
+ * sendiri, seperti pada peluncuran pertama di perangkat sungguhan.
+ */
+export async function createTestDb({ userId = 'user-uji', seedUser = true } = {}) {
   const raw = new DatabaseSync(':memory:');
   const db = wrap(raw);
 
   await migrate(db);
 
-  await db.runAsync(
-    'INSERT INTO users (id, first_name, updated_at) VALUES (?, ?, ?)',
-    [userId, 'Uji', new Date().toISOString()],
-  );
+  if (seedUser) {
+    await db.runAsync(
+      'INSERT INTO users (id, first_name, email, updated_at) VALUES (?, ?, ?, ?)',
+      [userId, 'Uji', 'uji@example.com', new Date().toISOString()],
+    );
+  }
 
   return { db, raw, userId, close: () => raw.close() };
 }

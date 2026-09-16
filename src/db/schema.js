@@ -21,7 +21,7 @@
 
 export const DATABASE_NAME = 'healthyhabit.db';
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 const V1 = `
 PRAGMA journal_mode = 'wal';
@@ -242,6 +242,31 @@ CREATE INDEX idx_workout_plan_unsynced
 `;
 
 /**
+ * V4 — kredensial akun lokal.
+ *
+ * Sebelumnya kata sandi dikumpulkan di layar daftar lalu dibuang, sehingga
+ * layar masuk tidak punya apa pun untuk dicocokkan: siapa pun bisa masuk
+ * dengan email yang belum pernah didaftarkan.
+ *
+ * `registered_at` yang menentukan apakah sebuah akun SUDAH DIDAFTARKAN.
+ * Baris pengguna sendiri sudah ada sejak peluncuran pertama (di-seed oleh
+ * `ensureUser`), jadi keberadaan barisnya tidak bisa dipakai sebagai
+ * penanda — kolom inilah yang membedakan profil bawaan dari akun sungguhan.
+ *
+ * Kolomnya SENGAJA tidak ikut pola `synced_at`: hash kata sandi lokal ini
+ * sementara dan tidak boleh dikirim ke server. Saat Supabase masuk,
+ * autentikasi pindah ke sana dan ketiga kolom ini dibuang.
+ *
+ * Lihat `src/lib/password.js` untuk batas keamanan yang harus disadari —
+ * SHA-256 adalah digest cepat, dan ini gerbang, bukan perlindungan.
+ */
+const V4 = `
+ALTER TABLE users ADD COLUMN password_hash TEXT;
+ALTER TABLE users ADD COLUMN password_salt TEXT;
+ALTER TABLE users ADD COLUMN registered_at TEXT;
+`;
+
+/**
  * Dijalankan lewat prop `onInit` milik SQLiteProvider, sebelum children render.
  * Versi schema dilacak dengan `PRAGMA user_version`.
  */
@@ -276,6 +301,11 @@ export async function migrate(db) {
   if (version === 2) {
     await db.execAsync(V3);
     version = 3;
+  }
+
+  if (version === 3) {
+    await db.execAsync(V4);
+    version = 4;
   }
 
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);

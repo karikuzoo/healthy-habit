@@ -6,12 +6,23 @@ import { colors } from '../theme/colors';
 /**
  * Input berlabel. `secure` menampilkan tombol mata untuk toggle visibilitas.
  * `icon` adalah nama ikon Ionicons yang muncul di sisi kiri.
+ *
+ * `error` menandai kolom bermasalah: bingkainya berubah merah dan pesannya
+ * muncul di bawah. Pesan itu ditaruh DI SEBELAH kolomnya, bukan dikumpulkan
+ * di satu tempat — kalau tiga kolom salah sekaligus, pengguna harus tahu yang
+ * mana tanpa mencocokkan sendiri.
+ *
+ * `suffix` adalah satuan yang menempel di sisi kanan, mis. "cm" atau "kg".
+ * Satuan yang hanya ditaruh di placeholder ikut hilang begitu pengguna
+ * mengetik — persis saat angkanya butuh diberi konteks.
  */
 export function Field({
   label,
   icon,
   secure = false,
   multiline = false,
+  error = null,
+  suffix = null,
   className = '',
   ...inputProps
 }) {
@@ -24,9 +35,9 @@ export function Field({
       ) : null}
 
       <View
-        className={`flex-row items-center gap-3 rounded-2xl border border-line bg-surface px-4 ${
-          multiline ? 'h-24 py-3' : 'h-14'
-        }`}
+        className={`flex-row items-center gap-3 rounded-2xl border bg-surface px-4 ${
+          error ? 'border-danger' : 'border-line'
+        } ${multiline ? 'h-24 py-3' : 'h-14'}`}
       >
         {icon ? (
           <Ionicons name={icon} size={20} color={colors.ink.muted} />
@@ -40,6 +51,10 @@ export function Field({
           textAlignVertical={multiline ? 'top' : 'center'}
           {...inputProps}
         />
+
+        {suffix ? (
+          <Text className="text-sm font-semibold text-ink-muted">{suffix}</Text>
+        ) : null}
 
         {secure ? (
           <Pressable
@@ -56,6 +71,17 @@ export function Field({
           </Pressable>
         ) : null}
       </View>
+
+      {error ? (
+        <View className="flex-row items-center gap-1.5">
+          <Ionicons
+            name="alert-circle"
+            size={13}
+            color={colors.danger.DEFAULT}
+          />
+          <Text className="flex-1 text-xs text-danger">{error}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
