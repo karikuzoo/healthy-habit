@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Card, Screen } from '../../src/components';
+import { Avatar, Card, Screen } from '../../src/components';
 import { colors } from '../../src/theme/colors';
 import { programs, programLabel } from '../../src/data/profile';
 import { formatNumber } from '../../src/lib/format';
@@ -57,9 +57,7 @@ export default function ProfileScreen() {
           </View>
 
           <View className="items-center gap-4">
-            <View className="h-24 w-24 items-center justify-center rounded-full bg-surface-sunken">
-              <Ionicons name="person" size={44} color={colors.ink.subtle} />
-            </View>
+            <Avatar uri={user.avatar} name={fullName} size={96} />
             <Text className="text-2xl font-bold text-ink">{fullName}</Text>
 
             <View className="w-full flex-row">

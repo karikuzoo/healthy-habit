@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import {
+  Avatar,
   Button,
   Card,
   ProgressBar,
@@ -119,9 +120,7 @@ export default function HomeDashboard() {
                 {user.firstName}
               </Text>
             </View>
-            <View className="h-12 w-12 items-center justify-center rounded-full bg-surface-sunken">
-              <Ionicons name="person" size={24} color={colors.ink.subtle} />
-            </View>
+            <Avatar uri={user.avatar} name={user.firstName} size={48} />
           </View>
 
           {/* Skor harian */}

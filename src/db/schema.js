@@ -19,7 +19,7 @@
  * memakai index tanpa konversi zona waktu di setiap baris.
  */
 
-export const DATABASE_NAME = 'healthyhabit.db';
+export const DATABASE_NAME = "healthyhabit.db";
 
 const SCHEMA_VERSION = 5;
 
@@ -293,9 +293,9 @@ export async function migrate(db) {
    * Kalau ditaruh di dalam skrip V1, ON DELETE CASCADE akan diam-diam mati
    * pada peluncuran kedua dan seterusnya, karena migrasi dilewati.
    */
-  await db.execAsync('PRAGMA foreign_keys = ON');
+  await db.execAsync("PRAGMA foreign_keys = ON");
 
-  const row = await db.getFirstAsync('PRAGMA user_version');
+  const row = await db.getFirstAsync("PRAGMA user_version");
   let version = row?.user_version ?? 0;
 
   if (version >= SCHEMA_VERSION) return;

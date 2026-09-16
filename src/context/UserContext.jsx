@@ -10,10 +10,17 @@ import { differenceInYears, format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Loading } from '../components/Loading';
+import { deleteAvatar } from '../lib/avatar';
 import { seedCatalogIfEmpty } from '../db/foods';
 import { seedDemoDayIfEmpty } from '../db/foodLogs';
 import { seedDemoWeekIfEmpty } from '../db/sleepLogs';
-import { ensureUser, updateUserRow } from '../db/users';
+import {
+  ensureUser,
+  registerAccount,
+  resetPassword,
+  updateUserRow,
+  verifyCredentials,
+} from '../db/users';
 
 const UserContext = createContext(null);
 
@@ -77,6 +84,63 @@ export function UserProvider({ children }) {
     [db, user],
   );
 
+  /**
+   * Mendaftarkan akun di perangkat ini, lalu memakainya sebagai profil aktif.
+   *
+   * Kata sandi tidak pernah masuk ke state React — ia langsung diserahkan ke
+   * lapisan database untuk di-hash, dan yang kembali hanya baris profilnya.
+   */
+  const register = useCallback(
+    async (credentials) => {
+      if (!user) return;
+
+      const { user: row, discardedAvatar } = await registerAccount(
+        db,
+        user.id,
+        credentials,
+      );
+
+      // Berkas foto pemilik lama dihapus SESUDAH barisnya berhasil ditulis;
+      // kalau gagal di tengah, yang tertinggal hanya berkas yatim — bukan
+      // profil yang menunjuk ke foto yang sudah lenyap.
+      await deleteAvatar(discardedAvatar);
+
+      setUser(row);
+    },
+    [db, user],
+  );
+
+  /**
+   * Memeriksa kredensial, lalu menandai sesi masuk kalau cocok.
+   *
+   * Hasil gagalnya dikembalikan apa adanya supaya layar masuk bisa
+   * membedakan "belum ada akun terdaftar" dari "kredensial salah".
+   */
+  const signIn = useCallback(
+    async (credentials) => {
+      const result = await verifyCredentials(db, credentials);
+      if (!result.ok) return result;
+
+      setUser(result.user);
+      setIsLoggedIn(true);
+      return result;
+    },
+    [db],
+  );
+
+  /**
+   * Mengganti kata sandi tanpa tahu yang lama (AUTH-7).
+   *
+   * TIDAK ikut menandai sesi masuk: sesudah berhasil, pengguna kembali ke
+   * layar masuk dan memakai kata sandi barunya. Itu membuktikan ia benar
+   * ingat apa yang baru saja disetel, dan sesuai dengan alur yang dikenal
+   * orang dari aplikasi lain.
+   */
+  const changePassword = useCallback(
+    async (credentials) => resetPassword(db, credentials),
+    [db],
+  );
+
   const login = useCallback(() => setIsLoggedIn(true), []);
   const logout = useCallback(() => setIsLoggedIn(false), []);
 
@@ -102,6 +166,9 @@ export function UserProvider({ children }) {
       isLoggedIn,
       login,
       logout,
+      register,
+      signIn,
+      changePassword,
       fullName: `${user.firstName} ${user.lastName}`.trim(),
       age,
       birthDateLabel: birth ? format(birth, 'd MMMM yyyy', { locale: idLocale }) : '',
@@ -114,7 +181,7 @@ export function UserProvider({ children }) {
         fat: Math.round((targetCalories * fatPct) / 9),
       },
     };
-  }, [user, updateUser, isLoggedIn, login, logout]);
+  }, [user, updateUser, isLoggedIn, login, logout, register, signIn, changePassword]);
 
   // Profil dibaca dari SQLite; tahan render sampai baris pertama tersedia
   if (!value) return <Loading />;
