@@ -24,6 +24,7 @@ import path from 'node:path';
 
 const STUBS = {
   'expo-crypto': new URL('./stubs/expo-crypto.mjs', import.meta.url).href,
+  'expo-file-system': new URL('./stubs/expo-file-system.mjs', import.meta.url).href,
 };
 
 /** Ekstensi yang ditebak Metro, diurutkan seperti urutan resolusinya. */
