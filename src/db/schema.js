@@ -21,7 +21,7 @@
 
 export const DATABASE_NAME = "healthyhabit.db";
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 8;
 
 const V1 = `
 PRAGMA journal_mode = 'wal';
@@ -325,6 +325,35 @@ export async function migrate(db) {
   if (version === 4) {
     await db.execAsync(V5);
     version = 5;
+  }
+
+  if (version === 5) {
+    try {
+      await db.execAsync(`
+        ALTER TABLE users ADD COLUMN password_hash TEXT;
+        ALTER TABLE users ADD COLUMN password_salt TEXT;
+      `);
+    } catch (e) {
+      console.log("Column might already exist", e);
+    }
+    version = 6;
+  }
+
+  if (version === 6) {
+    try {
+      await db.runAsync(`ALTER TABLE users ADD COLUMN password_hash TEXT`);
+    } catch (e) { /* ignore */ }
+    try {
+      await db.runAsync(`ALTER TABLE users ADD COLUMN password_salt TEXT`);
+    } catch (e) { /* ignore */ }
+    version = 7;
+  }
+
+  if (version === 7) {
+    try {
+      await db.runAsync(`ALTER TABLE users ADD COLUMN registered_at TEXT`);
+    } catch (e) { /* ignore */ }
+    version = 8;
   }
 
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);

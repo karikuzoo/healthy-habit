@@ -19,7 +19,7 @@ import {
   deleteTodayExercise,
   listTodayExercises,
 } from "../../src/db/workoutLogs";
-import { getTodayPlan, removePlanExercise } from "../../src/db/workoutPlan";
+import { getTodayPlan, removePlanExercise, clearTodayPlan } from "../../src/db/workoutPlan";
 import { getSleepForDay } from "../../src/db/sleepLogs";
 import { formatDuration } from "../../src/data/sleep";
 import { useUser } from "../../src/context/UserContext";

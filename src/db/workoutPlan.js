@@ -40,34 +40,9 @@ function toPlanItem(row) {
  * gerakan): penyemaian kedua tidak menghasilkan apa-apa, bukan baris kembar.
  */
 export async function ensureTodayPlan(db, userId, plannedOn = todayLocal()) {
-  const seeded = await db.getFirstAsync(
-    `SELECT COUNT(*) AS total FROM workout_plan_exercises
-      WHERE user_id = ? AND planned_on = ?`,
-    [userId, plannedOn],
-  );
-  if (seeded?.total > 0) return;
-
-  const timestamp = nowIso();
-
-  await db.withTransactionAsync(async () => {
-    for (const [index, item] of todayWorkout.plan.entries()) {
-      await db.runAsync(
-        `INSERT OR IGNORE INTO workout_plan_exercises
-           (${COLUMNS}, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          newId(),
-          userId,
-          plannedOn,
-          item.id,
-          item.sets,
-          item.reps,
-          index,
-          timestamp,
-        ],
-      );
-    }
-  });
+  // Tidak lagi melakukan auto-seed template default (Latihan Campuran).
+  // Akun baru akan mulai dengan plan kosong.
+  return;
 }
 
 /** Rencana hari ini, urut sesuai posisi. Tidak menyemai apa pun. */
@@ -89,6 +64,16 @@ export async function getTodayPlan(db, userId, plannedOn = todayLocal()) {
 }
 
 /** Satu gerakan pada rencana hari ini, atau null kalau tidak ada di rencana. */
+export async function clearTodayPlan(db, userId, plannedOn = todayLocal()) {
+  const timestamp = nowIso();
+  await db.runAsync(
+    `UPDATE workout_plan_exercises
+        SET deleted_at = ?, updated_at = ?, synced_at = NULL
+      WHERE user_id = ? AND planned_on = ? AND deleted_at IS NULL`,
+    [timestamp, timestamp, userId, plannedOn],
+  );
+}
+
 export async function getPlanExercise(
   db,
   userId,
