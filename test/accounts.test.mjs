@@ -6,59 +6,114 @@ import {
   ensureUser,
   hasRegisteredAccount,
   registerAccount,
+  registeredEmailHints,
   resetPassword,
+  updateUserRow,
   verifyCredentials,
 } from '../src/db/users.js';
 import { createSalt, hashPassword, verifyPassword } from '../src/lib/password.js';
 import { addFoodLog, dailyTotals } from '../src/db/foodLogs.js';
 
 /**
- * Gerbang akun lokal (AUTH-2, sementara sampai Supabase).
+ * Akun lokal (AUTH-2, sementara sampai Supabase).
  *
- * Uji yang paling penting di berkas ini adalah yang pertama: sebelum ada
- * gerbang ini, email yang belum pernah didaftarkan pun bisa masuk.
+ * Uji terpenting di berkas ini adalah yang pertama: satu perangkat harus bisa
+ * menampung lebih dari satu akun. Sebelumnya tabel `users` hanya pernah
+ * berisi satu baris, dan mendaftar MENIMPA baris itu — jadi mendaftar akun
+ * kedua membuat akun pertama lenyap tanpa peringatan apa pun, dan pemiliknya
+ * hanya melihat "email atau kata sandi salah" saat mencoba masuk lagi.
  */
 
-const AKUN = {
-  firstName: 'Ihsan',
+const AKUN_A = {
+  firstName: 'Achmad',
   lastName: 'Rahman',
-  email: 'ihsan@example.com',
-  password: 'rahasia123',
+  email: 'achmad@gmail.com',
+  password: 'Test1234',
 };
 
-/** Database dengan baris pengguna bawaan, belum ada yang mendaftar. */
-async function dbBaru() {
-  const ctx = await createTestDb();
-  // Baris users uji dibuat tanpa registered_at, sama seperti profil bawaan
-  // yang disemai `ensureUser` pada peluncuran pertama.
-  return ctx;
-}
+const AKUN_B = {
+  firstName: 'Budi',
+  lastName: '',
+  email: 'budi@gmail.com',
+  password: 'Test5678',
+};
 
-test('email yang belum terdaftar TIDAK bisa masuk', async (t) => {
-  const { db, close } = await dbBaru();
+const masuk = (db, akun) =>
+  verifyCredentials(db, { email: akun.email, password: akun.password });
+
+test('mendaftar akun kedua TIDAK menghapus akun pertama', async (t) => {
+  const { db, raw, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
-  const hasil = await verifyCredentials(db, {
+  // Persis langkah yang dilaporkan: daftar A, daftar B, lalu masuk A lagi.
+  await registerAccount(db, AKUN_A);
+  assert.equal((await masuk(db, AKUN_A)).ok, true, 'A bisa masuk setelah daftar');
+
+  await registerAccount(db, AKUN_B);
+
+  assert.equal((await masuk(db, AKUN_A)).ok, true, 'A HARUS tetap bisa masuk');
+  assert.equal((await masuk(db, AKUN_B)).ok, true, 'B juga bisa masuk');
+
+  const { n } = raw.prepare('SELECT COUNT(*) AS n FROM users').get();
+  assert.equal(n, 2, 'satu baris per akun, bukan satu baris per perangkat');
+});
+
+test('tiap akun punya catatan sendiri', async (t) => {
+  const { db, close } = await createTestDb({ seedUser: false });
+  t.after(close);
+
+  const a = await registerAccount(db, AKUN_A);
+  await addFoodLog(db, a.id, { slot: 'siang', name: 'Nasi', calories: 204 }, '2026-09-17');
+
+  const b = await registerAccount(db, AKUN_B);
+
+  // Karena tiap akun punya id sendiri, pemisahannya terjadi dengan
+  // sendirinya — tidak ada data yang perlu disingkirkan saat berganti akun.
+  assert.equal((await dailyTotals(db, b.id, '2026-09-17')).calories, 0);
+  assert.equal((await dailyTotals(db, a.id, '2026-09-17')).calories, 204);
+});
+
+test('akun baru tidak mewarisi foto akun lain', async (t) => {
+  const { db, close } = await createTestDb({ seedUser: false });
+  t.after(close);
+
+  const a = await registerAccount(db, AKUN_A);
+  await updateUserRow(db, a.id, { avatar: 'file:///dokumen/avatars/a.jpg' });
+
+  const b = await registerAccount(db, AKUN_B);
+
+  assert.equal(b.avatar, null, 'foto akun lain tidak boleh ikut');
+});
+
+test('email yang belum terdaftar TIDAK bisa masuk', async (t) => {
+  const { db, close } = await createTestDb({ seedUser: false });
+  t.after(close);
+
+  const kosong = await verifyCredentials(db, {
     email: 'orang-asing@example.com',
     password: 'apa saja',
   });
+  assert.equal(kosong.reason, 'belum-terdaftar');
 
-  assert.equal(hasil.ok, false);
-  assert.equal(hasil.reason, 'belum-terdaftar');
+  await registerAccount(db, AKUN_A);
+
+  // Sesudah ada akun, email tak dikenal dilaporkan sama seperti kata sandi
+  // salah — supaya penebak tidak tahu email mana yang terdaftar.
+  const asing = await verifyCredentials(db, {
+    email: 'orang-asing@example.com',
+    password: 'apa saja',
+  });
+  assert.equal(asing.reason, 'kredensial-salah');
 });
 
 test('profil bawaan yang belum didaftarkan bukan akun', async (t) => {
-  // Tanpa baris pengguna, supaya `ensureUser` benar-benar menyemai profil
-  // bawaannya — persis seperti peluncuran pertama di perangkat.
   const { db, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
   // `ensureUser` menyemai profil contoh lengkap dengan email. Keberadaan
-  // baris itu TIDAK boleh dianggap sebagai akun terdaftar — kalau iya,
-  // siapa pun bisa masuk memakai email contoh itu.
+  // baris itu TIDAK boleh dianggap akun terdaftar.
   const seeded = await ensureUser(db);
-  assert.ok(seeded.email, 'profil bawaan memang punya email');
-
+  assert.ok(seeded.email);
   assert.equal(await hasRegisteredAccount(db), false);
 
   const hasil = await verifyCredentials(db, {
@@ -68,355 +123,207 @@ test('profil bawaan yang belum didaftarkan bukan akun', async (t) => {
   assert.equal(hasil.reason, 'belum-terdaftar');
 });
 
-test('setelah mendaftar, kredensial yang benar bisa masuk', async (t) => {
-  const { db, userId, close } = await dbBaru();
+test('pendaftaran pertama mengklaim baris draf, bukan membuat baris kedua', async (t) => {
+  const { db, raw, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
-  await registerAccount(db, userId, AKUN);
-  assert.equal(await hasRegisteredAccount(db), true);
+  await ensureUser(db);
+  await registerAccount(db, AKUN_A);
 
-  const hasil = await verifyCredentials(db, {
-    email: AKUN.email,
-    password: AKUN.password,
-  });
-
-  assert.equal(hasil.ok, true);
-  assert.equal(hasil.user.firstName, 'Ihsan');
+  // Kalau draf ditinggalkan, perangkat punya baris yatim selamanya — dan
+  // data contoh yang disemai ke sana tidak akan pernah terlihat.
+  const { n } = raw.prepare('SELECT COUNT(*) AS n FROM users').get();
+  assert.equal(n, 1);
+  assert.equal((await masuk(db, AKUN_A)).ok, true);
 });
 
 test('kata sandi salah ditolak', async (t) => {
-  const { db, userId, close } = await dbBaru();
+  const { db, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
-  await registerAccount(db, userId, AKUN);
+  await registerAccount(db, AKUN_A);
 
   const hasil = await verifyCredentials(db, {
-    email: AKUN.email,
-    password: 'rahasia124',
+    email: AKUN_A.email,
+    password: 'Salah999',
   });
-
   assert.equal(hasil.ok, false);
   assert.equal(hasil.reason, 'kredensial-salah');
 });
 
-test('email lain ditolak dengan alasan yang SAMA seperti kata sandi salah', async (t) => {
-  const { db, userId, close } = await dbBaru();
-  t.after(close);
-
-  await registerAccount(db, userId, AKUN);
-
-  const emailSalah = await verifyCredentials(db, {
-    email: 'lain@example.com',
-    password: AKUN.password,
-  });
-  const sandiSalah = await verifyCredentials(db, {
-    email: AKUN.email,
-    password: 'salah sekali',
-  });
-
-  // Membedakan keduanya akan memberi tahu penebak bahwa sebuah email
-  // terdaftar di perangkat itu.
-  assert.equal(emailSalah.reason, sandiSalah.reason);
-  assert.equal(emailSalah.reason, 'kredensial-salah');
-});
-
 test('email tidak peka huruf besar-kecil maupun spasi', async (t) => {
-  const { db, userId, close } = await dbBaru();
+  const { db, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
-  await registerAccount(db, userId, { ...AKUN, email: 'Ihsan@Example.COM' });
+  await registerAccount(db, { ...AKUN_A, email: 'Achmad@Gmail.COM' });
 
   const hasil = await verifyCredentials(db, {
-    email: '  ihsan@example.com  ',
-    password: AKUN.password,
+    email: '  achmad@gmail.com  ',
+    password: AKUN_A.password,
   });
-
-  assert.equal(hasil.ok, true, 'alamat yang sama harus dikenali sama');
+  assert.equal(hasil.ok, true);
 });
 
-test('kata sandi tidak tersimpan sebagai teks polos', async (t) => {
-  const { db, userId, raw, close } = await dbBaru();
+test('mendaftar ulang dengan email SAMA mengambil alih akun, catatan tetap utuh', async (t) => {
+  const { db, raw, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
-  await registerAccount(db, userId, AKUN);
+  const a = await registerAccount(db, AKUN_A);
+  await addFoodLog(db, a.id, { slot: 'siang', name: 'Nasi', calories: 204 }, '2026-09-17');
 
-  const row = raw
-    .prepare('SELECT password_hash, password_salt FROM users WHERE id = ?')
-    .get(userId);
+  // Ini jalur "lupa kata sandi lalu daftar ulang" — orangnya sama.
+  const lagi = await registerAccount(db, { ...AKUN_A, password: 'Baru1234' });
 
-  assert.ok(row.password_salt, 'salt harus ada');
-  assert.ok(row.password_hash, 'hash harus ada');
+  assert.equal(lagi.id, a.id, 'baris yang sama, bukan akun baru');
+  assert.equal((await dailyTotals(db, a.id, '2026-09-17')).calories, 204);
 
-  // Yang tersimpan tidak boleh berisi kata sandinya, dalam bentuk apa pun.
-  const seluruhBaris = JSON.stringify(row);
+  const { n } = raw.prepare('SELECT COUNT(*) AS n FROM users').get();
+  assert.equal(n, 1);
+
   assert.equal(
-    seluruhBaris.includes(AKUN.password),
-    false,
-    'kata sandi tidak boleh muncul di baris database',
+    (await verifyCredentials(db, { email: AKUN_A.email, password: 'Baru1234' })).ok,
+    true,
   );
 });
 
-test('dua akun dengan kata sandi sama menghasilkan hash berbeda', async (t) => {
-  // Itu gunanya salt acak per akun: tabel pelangi umum jadi tidak berguna.
+test('kata sandi tidak tersimpan sebagai teks polos', async (t) => {
+  const { db, raw, close } = await createTestDb({ seedUser: false });
+  t.after(close);
+
+  const a = await registerAccount(db, AKUN_A);
+  const row = raw
+    .prepare('SELECT password_hash, password_salt FROM users WHERE id = ?')
+    .get(a.id);
+
+  assert.ok(row.password_salt);
+  assert.ok(row.password_hash);
+  assert.equal(JSON.stringify(row).includes(AKUN_A.password), false);
+});
+
+test('dua akun dengan kata sandi sama menghasilkan hash berbeda', async () => {
   const saltA = await createSalt();
   const saltB = await createSalt();
 
   assert.notEqual(saltA, saltB);
   assert.notEqual(
-    await hashPassword('rahasia123', saltA),
-    await hashPassword('rahasia123', saltB),
+    await hashPassword('Test1234', saltA),
+    await hashPassword('Test1234', saltB),
   );
 });
 
 test('verifyPassword menolak hash atau salt yang hilang', async () => {
   const salt = await createSalt();
-  const hash = await hashPassword('rahasia123', salt);
+  const hash = await hashPassword('Test1234', salt);
 
-  assert.equal(await verifyPassword('rahasia123', salt, hash), true);
-  assert.equal(await verifyPassword('rahasia123', null, hash), false);
-  assert.equal(await verifyPassword('rahasia123', salt, null), false);
+  assert.equal(await verifyPassword('Test1234', salt, hash), true);
+  assert.equal(await verifyPassword('Test1234', null, hash), false);
+  assert.equal(await verifyPassword('Test1234', salt, null), false);
 });
 
-test('mendaftar ulang menimpa akun sebelumnya', async (t) => {
-  const { db, userId, close } = await dbBaru();
+test('atur ulang kata sandi hanya menyentuh akun yang emailnya cocok', async (t) => {
+  const { db, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
-  await registerAccount(db, userId, AKUN);
-  await registerAccount(db, userId, {
-    firstName: 'Budi',
-    lastName: '',
-    email: 'budi@example.com',
-    password: 'sandibaru123',
-  });
-
-  // Akun lama tidak boleh bisa masuk lagi
-  const lama = await verifyCredentials(db, {
-    email: AKUN.email,
-    password: AKUN.password,
-  });
-  assert.equal(lama.ok, false);
-
-  const baru = await verifyCredentials(db, {
-    email: 'budi@example.com',
-    password: 'sandibaru123',
-  });
-  assert.equal(baru.ok, true);
-  assert.equal(baru.user.firstName, 'Budi');
-});
-
-test('atur ulang kata sandi: email cocok -> kata sandi lama mati, yang baru hidup', async (t) => {
-  const { db, userId, close } = await dbBaru();
-  t.after(close);
-
-  await registerAccount(db, userId, AKUN);
+  await registerAccount(db, AKUN_A);
+  await registerAccount(db, AKUN_B);
 
   const hasil = await resetPassword(db, {
-    email: AKUN.email,
-    password: 'sandibaru123',
+    email: AKUN_A.email,
+    password: 'Baru1234',
   });
   assert.equal(hasil.ok, true);
 
-  const lama = await verifyCredentials(db, {
-    email: AKUN.email,
-    password: AKUN.password,
-  });
-  assert.equal(lama.ok, false, 'kata sandi lama harus berhenti berlaku');
+  assert.equal((await masuk(db, AKUN_A)).ok, false, 'kata sandi lama A mati');
+  assert.equal(
+    (await verifyCredentials(db, { email: AKUN_A.email, password: 'Baru1234' })).ok,
+    true,
+  );
 
-  const baru = await verifyCredentials(db, {
-    email: AKUN.email,
-    password: 'sandibaru123',
-  });
-  assert.equal(baru.ok, true);
+  // Akun lain tidak boleh ikut terpengaruh
+  assert.equal((await masuk(db, AKUN_B)).ok, true, 'B tidak tersentuh');
 });
 
-test('atur ulang menolak email yang tidak cocok, dan tidak mengubah apa pun', async (t) => {
-  const { db, userId, close } = await dbBaru();
+test('atur ulang menolak email yang tidak cocok, tanpa mengubah apa pun', async (t) => {
+  const { db, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
-  await registerAccount(db, userId, AKUN);
+  await registerAccount(db, AKUN_A);
 
   const hasil = await resetPassword(db, {
     email: 'orang-lain@example.com',
-    password: 'sandibaru123',
+    password: 'Baru1234',
   });
-
-  assert.equal(hasil.ok, false);
   assert.equal(hasil.reason, 'email-tidak-cocok');
-
-  // Kata sandi lama HARUS tetap berlaku — percobaan yang gagal tidak boleh
-  // menyentuh akun sama sekali.
-  const lama = await verifyCredentials(db, {
-    email: AKUN.email,
-    password: AKUN.password,
-  });
-  assert.equal(lama.ok, true, 'akun tidak boleh tersentuh oleh reset yang gagal');
+  assert.equal((await masuk(db, AKUN_A)).ok, true);
 });
 
 test('atur ulang tidak bisa dipakai sebelum ada akun terdaftar', async (t) => {
-  const { db, close } = await dbBaru();
+  const { db, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
   const hasil = await resetPassword(db, {
     email: 'siapa-saja@example.com',
-    password: 'sandibaru123',
+    password: 'Baru1234',
   });
-
-  assert.equal(hasil.ok, false);
   assert.equal(hasil.reason, 'belum-terdaftar');
 });
 
 test('atur ulang memakai salt baru, bukan salt lama', async (t) => {
-  const { db, userId, raw, close } = await dbBaru();
+  const { db, raw, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
-  await registerAccount(db, userId, AKUN);
+  const a = await registerAccount(db, AKUN_A);
   const sebelum = raw
     .prepare('SELECT password_salt, password_hash FROM users WHERE id = ?')
-    .get(userId);
+    .get(a.id);
 
-  // Kata sandi yang SAMA disetel ulang. Kalau saltnya dipakai lagi, hashnya
-  // akan identik — dan hash yang tidak pernah berubah membocorkan bahwa
-  // kata sandinya juga tidak berubah.
-  await resetPassword(db, { email: AKUN.email, password: AKUN.password });
+  // Kata sandi yang SAMA disetel ulang. Hash yang tidak berubah akan
+  // membocorkan bahwa kata sandinya juga tidak berubah.
+  await resetPassword(db, { email: AKUN_A.email, password: AKUN_A.password });
 
   const sesudah = raw
     .prepare('SELECT password_salt, password_hash FROM users WHERE id = ?')
-    .get(userId);
+    .get(a.id);
 
   assert.notEqual(sesudah.password_salt, sebelum.password_salt);
   assert.notEqual(sesudah.password_hash, sebelum.password_hash);
 });
 
-/** Membuat jejak pemakaian untuk akun yang sedang aktif. */
-async function isiJejak(db, userId) {
-  await addFoodLog(
-    db,
-    userId,
-    { slot: 'siang', name: 'Nasi Putih', calories: 204 },
-    '2026-09-16',
-  );
-  await db.runAsync(
-    'UPDATE users SET avatar_uri = ?, height_cm = ?, weight_kg = ? WHERE id = ?',
-    ['file:///dokumen/avatars/lama.jpg', 182, 78, userId],
-  );
-}
-
-test('akun baru TIDAK mewarisi foto dan profil pemilik sebelumnya', async (t) => {
-  const { db, userId, close } = await dbBaru();
+test('email disimpan sudah ternormalkan saat diubah lewat Edit profil', async (t) => {
+  const { db, raw, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
-  await registerAccount(db, userId, AKUN);
-  await isiJejak(db, userId);
+  const a = await registerAccount(db, AKUN_A);
+  await updateUserRow(db, a.id, { email: '  Achmad.Baru@Gmail.COM ' });
 
-  const { user, discardedAvatar } = await registerAccount(db, userId, {
-    firstName: 'Budi',
-    lastName: '',
-    email: 'budi@example.com',
-    password: 'sandibaru123',
-  });
-
-  // Inilah gejala yang terlihat pengguna: foto akun lama masih terpasang
-  // di akun yang baru saja dibuat.
-  assert.equal(user.avatar, null, 'foto pemilik lama tidak boleh ikut');
-  assert.equal(
-    discardedAvatar,
-    'file:///dokumen/avatars/lama.jpg',
-    'berkas fotonya dikembalikan supaya pemanggil bisa menghapusnya',
-  );
-
-  // Dan yang tidak terlihat tapi sama salahnya
-  assert.equal(user.height, 170, 'tinggi kembali ke awal');
-  assert.equal(user.weight, 65, 'berat kembali ke awal');
+  // Yang diperiksa NILAI TERSIMPANNYA — masuk akan berhasil apa pun
+  // bentuknya, karena `verifyCredentials` menormalkan saat membaca.
+  const row = raw.prepare('SELECT email FROM users WHERE id = ?').get(a.id);
+  assert.equal(row.email, 'achmad.baru@gmail.com');
 });
 
-test('akun baru TIDAK mewarisi catatan pemilik sebelumnya', async (t) => {
-  const { db, userId, close } = await dbBaru();
+test('petunjuk email menyamarkan bagian lokal, menampilkan semua akun', async (t) => {
+  const { db, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
-  await registerAccount(db, userId, AKUN);
-  await isiJejak(db, userId);
+  assert.deepEqual(await registeredEmailHints(db), [], 'belum ada akun');
 
-  assert.equal((await dailyTotals(db, userId, '2026-09-16')).calories, 204);
+  await registerAccount(db, AKUN_A);
+  await registerAccount(db, AKUN_B);
 
-  await registerAccount(db, userId, {
-    firstName: 'Budi',
-    lastName: '',
-    email: 'budi@example.com',
-    password: 'sandibaru123',
-  });
+  const hints = await registeredEmailHints(db);
 
-  // `user.id` tidak berubah, jadi tanpa penyingkiran eksplisit seluruh
-  // riwayat pemilik lama ikut terbawa ke akun baru.
-  assert.equal(
-    (await dailyTotals(db, userId, '2026-09-16')).calories,
-    0,
-    'riwayat pemilik lama tidak boleh muncul di akun baru',
-  );
+  assert.equal(hints.length, 2, 'kedua akun disebutkan');
+  assert.ok(hints.includes('a••••d@gmail.com'), JSON.stringify(hints));
+  assert.ok(hints.every((h) => h.endsWith('@gmail.com')), 'domain dibiarkan utuh');
 });
 
-test('catatan disingkirkan dengan SOFT delete, bukan dihapus permanen', async (t) => {
-  const { db, userId, raw, close } = await dbBaru();
+test('bagian lokal yang pendek disamarkan seluruhnya', async (t) => {
+  const { db, close } = await createTestDb({ seedUser: false });
   t.after(close);
 
-  await registerAccount(db, userId, AKUN);
-  await isiJejak(db, userId);
+  // Menampilkan 1 dari 2 huruf hampir sama saja dengan menampilkan semuanya.
+  await registerAccount(db, { ...AKUN_A, email: 'ab@mail.com' });
 
-  await registerAccount(db, userId, {
-    firstName: 'Budi',
-    lastName: '',
-    email: 'budi@example.com',
-    password: 'sandibaru123',
-  });
-
-  // Barisnya harus tetap ada: penghapusan perlu bisa disinkronkan, dan
-  // kalau ternyata salah orang yang mendaftar, datanya masih terselamatkan.
-  const { n } = raw.prepare('SELECT COUNT(*) AS n FROM food_logs').get();
-  assert.equal(n, 1, 'barisnya tetap ada');
-
-  const row = raw.prepare('SELECT deleted_at FROM food_logs LIMIT 1').get();
-  assert.ok(row.deleted_at, 'hanya ditandai terhapus');
-});
-
-test('mendaftar ulang dengan email SAMA mempertahankan foto dan catatan', async (t) => {
-  const { db, userId, close } = await dbBaru();
-  t.after(close);
-
-  await registerAccount(db, userId, AKUN);
-  await isiJejak(db, userId);
-
-  // Ini jalur "lupa kata sandi lalu daftar ulang" — orangnya sama, jadi
-  // tidak boleh kehilangan apa pun.
-  const { user, discardedAvatar } = await registerAccount(db, userId, {
-    ...AKUN,
-    password: 'sandibaru123',
-  });
-
-  assert.equal(discardedAvatar, null, 'tidak ada foto yang perlu dibuang');
-  assert.equal(user.avatar, 'file:///dokumen/avatars/lama.jpg');
-  assert.equal(user.height, 182, 'profil tidak boleh direset');
-  assert.equal((await dailyTotals(db, userId, '2026-09-16')).calories, 204);
-
-  // Kata sandi barunya tetap berlaku
-  const masuk = await verifyCredentials(db, {
-    email: AKUN.email,
-    password: 'sandibaru123',
-  });
-  assert.equal(masuk.ok, true);
-});
-
-test('email sama dengan beda huruf besar tetap dianggap orang yang sama', async (t) => {
-  const { db, userId, close } = await dbBaru();
-  t.after(close);
-
-  await registerAccount(db, userId, AKUN);
-  await isiJejak(db, userId);
-
-  const { user } = await registerAccount(db, userId, {
-    ...AKUN,
-    email: 'IHSAN@Example.com',
-    password: 'sandibaru123',
-  });
-
-  assert.equal(user.avatar, 'file:///dokumen/avatars/lama.jpg');
-  assert.equal((await dailyTotals(db, userId, '2026-09-16')).calories, 204);
+  assert.deepEqual(await registeredEmailHints(db), ['••@mail.com']);
 });

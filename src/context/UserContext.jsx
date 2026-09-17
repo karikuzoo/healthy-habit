@@ -10,13 +10,13 @@ import { differenceInYears, format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Loading } from '../components/Loading';
-import { deleteAvatar } from '../lib/avatar';
 import { seedCatalogIfEmpty } from '../db/foods';
 import { seedDemoDayIfEmpty } from '../db/foodLogs';
 import { seedDemoWeekIfEmpty } from '../db/sleepLogs';
 import {
   ensureUser,
   registerAccount,
+  registeredEmailHints,
   resetPassword,
   updateUserRow,
   verifyCredentials,
@@ -90,24 +90,20 @@ export function UserProvider({ children }) {
    * Kata sandi tidak pernah masuk ke state React — ia langsung diserahkan ke
    * lapisan database untuk di-hash, dan yang kembali hanya baris profilnya.
    */
+  /**
+   * Mendaftarkan akun baru, lalu memakainya sebagai profil aktif.
+   *
+   * Tidak lagi mengirim `user.id`: satu perangkat bisa punya beberapa akun,
+   * dan lapisan database yang menentukan baris mana yang dipakai — akun lama
+   * kalau emailnya sudah terdaftar, baris baru kalau belum.
+   */
   const register = useCallback(
     async (credentials) => {
-      if (!user) return;
-
-      const { user: row, discardedAvatar } = await registerAccount(
-        db,
-        user.id,
-        credentials,
-      );
-
-      // Berkas foto pemilik lama dihapus SESUDAH barisnya berhasil ditulis;
-      // kalau gagal di tengah, yang tertinggal hanya berkas yatim — bukan
-      // profil yang menunjuk ke foto yang sudah lenyap.
-      await deleteAvatar(discardedAvatar);
-
+      const row = await registerAccount(db, credentials);
       setUser(row);
+      return row;
     },
-    [db, user],
+    [db],
   );
 
   /**
@@ -141,6 +137,9 @@ export function UserProvider({ children }) {
     [db],
   );
 
+  /** Email akun terdaftar dalam bentuk tersamar, untuk layar lupa kata sandi. */
+  const emailHints = useCallback(async () => registeredEmailHints(db), [db]);
+
   const login = useCallback(() => setIsLoggedIn(true), []);
   const logout = useCallback(() => setIsLoggedIn(false), []);
 
@@ -169,6 +168,7 @@ export function UserProvider({ children }) {
       register,
       signIn,
       changePassword,
+      emailHints,
       fullName: `${user.firstName} ${user.lastName}`.trim(),
       age,
       birthDateLabel: birth ? format(birth, 'd MMMM yyyy', { locale: idLocale }) : '',
@@ -181,7 +181,7 @@ export function UserProvider({ children }) {
         fat: Math.round((targetCalories * fatPct) / 9),
       },
     };
-  }, [user, updateUser, isLoggedIn, login, logout, register, signIn, changePassword]);
+  }, [user, updateUser, isLoggedIn, login, logout, register, signIn, changePassword, emailHints]);
 
   // Profil dibaca dari SQLite; tahan render sampai baris pertama tersedia
   if (!value) return <Loading />;

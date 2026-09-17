@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Button, Card, Field, Screen, ScreenHeader } from '../src/components';
+import {
+  Button,
+  Card,
+  Dialog,
+  Field,
+  Screen,
+  ScreenHeader,
+} from '../src/components';
 import { colors } from '../src/theme/colors';
 import { validateResetPassword } from '../src/lib/validateAuth';
 import { useUser } from '../src/context/UserContext';
@@ -23,7 +30,7 @@ import { useUser } from '../src/context/UserContext';
  * (masukkan email → setel kata sandi baru), jadi layarnya tidak terbuang.
  */
 export default function ResetPasswordScreen() {
-  const { changePassword } = useUser();
+  const { changePassword, emailHints } = useUser();
 
   const [form, setForm] = useState({
     email: '',
@@ -35,6 +42,18 @@ export default function ResetPasswordScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
+  const [berhasil, setBerhasil] = useState(false);
+
+  /** Petunjuk email terdaftar — tanpa ini, orang yang lupa hanya bisa menebak. */
+  const [hints, setHints] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    emailHints().then((value) => active && setHints(value));
+    return () => {
+      active = false;
+    };
+  }, [emailHints]);
 
   const setField = (key) => (value) => {
     const next = { ...form, [key]: value };
@@ -60,11 +79,7 @@ export default function ResetPasswordScreen() {
     setSaving(false);
 
     if (attempt.ok) {
-      Alert.alert(
-        'Kata sandi diperbarui',
-        'Masuk kembali memakai kata sandi barumu.',
-        [{ text: 'Masuk', onPress: () => router.back() }],
-      );
+      setBerhasil(true);
       return;
     }
 
@@ -87,17 +102,39 @@ export default function ResetPasswordScreen() {
           </Text>
 
           {/* Batas yang harus dikatakan, bukan disembunyikan */}
-          <Card className="flex-row items-start gap-3 p-4">
-            <Ionicons
-              name="information-circle-outline"
-              size={18}
-              color={colors.ink.muted}
-            />
-            <Text className="flex-1 text-xs leading-5 text-ink-muted">
-              Akunmu masih tersimpan di perangkat ini saja, jadi belum ada
-              email pemulihan yang bisa dikirim. Untuk sekarang, mengetahui
-              email terdaftar sudah cukup untuk menggantinya.
-            </Text>
+          <Card className="gap-2 p-4">
+            <View className="flex-row items-start gap-3">
+              <Ionicons
+                name="information-circle-outline"
+                size={18}
+                color={colors.ink.muted}
+              />
+              <Text className="flex-1 text-xs leading-5 text-ink-muted">
+                Akunmu masih tersimpan di perangkat ini saja, jadi belum ada
+                email pemulihan yang bisa dikirim. Untuk sekarang, mengetahui
+                email terdaftar sudah cukup untuk menggantinya.
+              </Text>
+            </View>
+
+            {/* Tanpa petunjuk ini, orang yang lupa emailnya hanya bisa
+                menebak — dan layar masuk sengaja tidak memberitahunya. */}
+            {hints.length > 0 ? (
+              <View className="gap-1 rounded-xl bg-surface-sunken px-3 py-2">
+                <Text className="text-2xs font-bold tracking-wider text-ink-subtle">
+                  {hints.length > 1 ? 'AKUN TERDAFTAR' : 'AKUN DI PERANGKAT INI'}
+                </Text>
+                {hints.map((hint) => (
+                  <View key={hint} className="flex-row items-center gap-2">
+                    <Ionicons
+                      name="person-circle-outline"
+                      size={14}
+                      color={colors.ink.muted}
+                    />
+                    <Text className="flex-1 text-xs font-bold text-ink">{hint}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </Card>
 
           <Field
@@ -149,6 +186,22 @@ export default function ResetPasswordScreen() {
             label={saving ? 'Menyimpan...' : 'Simpan kata sandi baru'}
             onPress={handleSubmit}
             className={saving ? 'mt-1 opacity-50' : 'mt-1'}
+          />
+
+          {/* Menahan langkah terakhir, sama seperti dialog berhasil daftar:
+              pengguna harus tahu kata sandinya sudah berganti sebelum
+              dikembalikan ke layar masuk. */}
+          <Dialog
+            visible={berhasil}
+            icon="lock-open"
+            tone="success"
+            title="Kata sandi diperbarui"
+            description="Masuk kembali memakai kata sandi barumu."
+            actionLabel="Masuk"
+            onAction={() => {
+              setBerhasil(false);
+              router.back();
+            }}
           />
         </View>
       </ScrollView>

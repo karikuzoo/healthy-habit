@@ -21,7 +21,7 @@
 
 export const DATABASE_NAME = "healthyhabit.db";
 
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 
 const V1 = `
 PRAGMA journal_mode = 'wal';
@@ -281,6 +281,30 @@ DROP INDEX IF EXISTS idx_workout_plan_unique;
 `;
 
 /**
+ * V9 — satu baris `users` per akun, bukan satu baris untuk seluruh perangkat.
+ *
+ * Sebelumnya tabel `users` hanya pernah berisi satu baris, dan mendaftar
+ * MENIMPA baris itu. Akibatnya fatal dan sunyi: mendaftar akun kedua membuat
+ * akun pertama lenyap tanpa peringatan, dan pemiliknya hanya melihat "email
+ * atau kata sandi salah" saat mencoba masuk lagi.
+ *
+ * Strukturnya sudah mendukung banyak baris sejak V1 (`id` UUID sebagai
+ * primary key); yang kurang hanyalah jaminan bahwa satu email tidak dipakai
+ * dua akun. Indeks parsial di bawah memberikannya, sekaligus membiarkan baris
+ * draf yang belum didaftarkan (`registered_at` NULL) tetap boleh ada.
+ *
+ * DINOMORI 9, BUKAN 5, karena V5–V8 sudah dipakai di branch bersama sebelum
+ * perubahan ini digabungkan. Dua migrasi dengan nomor sama akan membuat
+ * sebagian perangkat menjalankan satu dan melewatkan yang lain, dan
+ * `PRAGMA user_version` tidak punya cara memberitahu mana yang sudah jalan.
+ */
+const V9 = `
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_terdaftar
+  ON users(email)
+  WHERE registered_at IS NOT NULL AND deleted_at IS NULL;
+`;
+
+/**
  * Dijalankan lewat prop \`onInit\` milik SQLiteProvider, sebelum children render.
  * Versi schema dilacak dengan \`PRAGMA user_version\`.
  */
@@ -356,5 +380,9 @@ export async function migrate(db) {
     version = 8;
   }
 
+  if (version === 8) {
+    await db.execAsync(V9);
+    version = 9;
+  }
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }
