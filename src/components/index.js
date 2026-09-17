@@ -4,6 +4,7 @@ export { Avatar } from './Avatar';
 export { Card } from './Card';
 export { Chip } from './Chip';
 export { DateField } from './DateField';
+export { Dialog } from './Dialog';
 export { DatePickerSheet } from './DatePickerSheet';
 export { ExerciseMedia } from './ExerciseMedia';
 export { Field } from './Field';

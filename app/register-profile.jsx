@@ -7,6 +7,7 @@ import {
   Field,
   Screen,
   DateField,
+  Dialog,
   ScreenHeader,
   SelectField,
   StepProgress,
@@ -32,7 +33,21 @@ export default function RegisterProfileScreen() {
   const [program, setProgram] = useState('cutting');
   const [birthDate, setBirthDate] = useState(user.birthDate ?? null);
 
+  /**
+   * Dialog berhasil menahan langkah terakhir, bukan sekadar hiasan.
+   *
+   * Mendaftar adalah satu-satunya titik di aplikasi ini yang membuat akun,
+   * dan sebelumnya ia selesai tanpa satu pun tanda — layar langsung berganti
+   * jadi dashboard, dan pengguna tidak pernah diberi tahu bahwa akunnya
+   * benar-benar jadi. Sesi baru ditandai masuk setelah dialognya diakui.
+   */
+  const [berhasil, setBerhasil] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   const handleContinue = async () => {
+    if (saving) return;
+    setSaving(true);
+
     await updateUser({
       activityLevel,
       gender,
@@ -41,6 +56,13 @@ export default function RegisterProfileScreen() {
       ...(height ? { height: Number(height) } : null),
       ...(weight ? { weight: Number(weight) } : null),
     });
+
+    setSaving(false);
+    setBerhasil(true);
+  };
+
+  const masukKeAplikasi = () => {
+    setBerhasil(false);
     login();
     enterApp();
   };
@@ -115,7 +137,21 @@ export default function RegisterProfileScreen() {
             </View>
           </View>
 
-          <Button label="Lanjutkan" onPress={handleContinue} className="mt-2" />
+          <Button
+            label={saving ? 'Menyimpan...' : 'Lanjutkan'}
+            onPress={handleContinue}
+            className={saving ? 'mt-2 opacity-50' : 'mt-2'}
+          />
+
+          <Dialog
+            visible={berhasil}
+            icon="checkmark-circle"
+            tone="success"
+            title="Pendaftaran berhasil"
+            description={`Selamat datang${user.firstName ? `, ${user.firstName}` : ''}! Akunmu sudah siap dan targetmu sudah dihitung dari data tubuhmu.`}
+            actionLabel="Mulai sekarang"
+            onAction={masukKeAplikasi}
+          />
 
           <Pressable
             onPress={() => router.push('/login')}
