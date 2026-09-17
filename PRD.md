@@ -146,25 +146,32 @@ akan membocorkan bahwa kata sandinya juga tidak berubah.
 Bentuk alurnya sama dengan yang nanti dipakai saat Supabase masuk, jadi
 layarnya tidak terbuang — yang berganti hanya sumber verifikasinya.
 
-**Mendaftar dengan email berbeda = perangkat berpindah pemilik**
-(ditetapkan 16 Sep 2026)
+**Satu baris per akun** (ditetapkan 17 Sep 2026, migrasi V5)
 
-Perangkat hanya mengenal SATU baris pengguna, dan `user.id`-nya tidak
-berubah saat mendaftar. Akibatnya akun baru mewarisi seluruh isi akun
-sebelumnya — foto, tinggi, berat, program, sampai riwayat makanan dan latihan.
+Sebelumnya tabel `users` hanya pernah berisi SATU baris, dan mendaftar
+menimpanya. Akibatnya fatal dan sunyi:
 
-Email yang dipakai sekarang menentukan maksudnya:
+1. daftar akun A → masuk berhasil → keluar
+2. daftar akun B → masuk berhasil → keluar
+3. masuk lagi dengan akun A → **gagal**, "email atau kata sandi salah"
 
-| Email saat daftar | Artinya | Yang terjadi |
-|---|---|---|
-| Sama dengan akun terdaftar | Pemiliknya mengambil alih akunnya sendiri (mis. lupa kata sandi) | Profil dan seluruh catatan dipertahankan |
-| Berbeda | Perangkat berpindah pemilik | Profil kembali ke awal, catatan pemilik lama disingkirkan |
+Akun A tidak gagal masuk — ia sudah tidak ada. Sekarang email menentukan
+barisnya:
 
-Penyingkirannya memakai **soft delete**, sama seperti seluruh penghapusan lain
-di aplikasi ini: barisnya tetap ada supaya bisa disinkronkan nanti, dan kalau
-ternyata salah orang yang mendaftar, datanya masih bisa diselamatkan dari
-database. Berkas foto pemilik lama dihapus SESUDAH baris profilnya berhasil
-ditulis.
+| Email saat daftar | Yang terjadi |
+|---|---|
+| Sudah terdaftar | Barisnya diperbarui — pemiliknya mengambil alih akunnya sendiri (mis. lupa kata sandi), catatannya utuh |
+| Baru, dan masih ada baris draf | Baris bawaan dari `ensureUser` diklaim jadi akun ini |
+| Baru, tanpa draf | Baris BARU dibuat |
+
+`verifyCredentials` dan `resetPassword` mencari **berdasarkan email**, bukan
+mengambil "baris terdaftar pertama" — pengambilan itulah yang menolak setiap
+akun kecuali satu.
+
+Karena tiap akun punya `id` sendiri, catatan makanan, tidur, latihan, dan
+langkahnya terpisah dengan sendirinya. Logika penyingkiran data saat
+"perangkat berpindah pemilik" yang sempat ada jadi tidak diperlukan dan sudah
+dibuang.
 
 **Rentang tinggi/berat dan batas usia minimum masih terbuka** ❓ — belum
 dibutuhkan sampai tahap 2 pendaftaran divalidasi.
@@ -450,7 +457,7 @@ akan membuat ON DELETE CASCADE mati pada peluncuran kedua.
 | NFR-7 | Aman terhadap area notch/home indicator | ✅ via `Screen` |
 | NFR-8 | Bar & ring progres tidak meluber saat data melebihi target | ✅ dijepit 0..1 |
 | NFR-9 | Data kesehatan terenkripsi saat disimpan | ⬜ SQLCipher butuh prebuild |
-| NFR-10 | Uji otomatis | 🚧 74 uji `node:test` untuk logika murni & query SQLite; komponen dan bagian workout belum |
+| NFR-10 | Uji otomatis | 🚧 81 uji `node:test` untuk logika murni & query SQLite; komponen dan bagian workout belum |
 
 **NFR-10 — cara uji dijalankan** (ditetapkan 15 Sep 2026)
 
@@ -676,7 +683,6 @@ menurut apa yang menghalanginya.
 | Data contoh | `seedDemoDayIfEmpty` & `seedDemoWeekIfEmpty` masih menyemai hari/minggu contoh pada peluncuran pertama; hapus bila tidak diperlukan lagi |
 | Judul bagian berbahasa Inggris | "Active Program", "Settings", "Weekly Trend" — perlu keputusan: terjemahkan atau pertahankan |
 | Konversi satuan | PROF-7 mengubah label saja, angka belum dikonversi |
-| Perangkat hanya mengenal satu akun | Satu baris `users` dipakai ulang, jadi berganti akun berarti menyingkirkan data pemilik lama. Akun ganda butuh model banyak baris — menyusul bersama autentikasi Supabase |
 | Foto profil tidak ikut sinkron | `avatar_uri` menyimpan jalur berkas lokal, yang tidak berarti apa-apa di perangkat lain. Saat sinkronisasi masuk, fotonya perlu object storage (mis. Supabase Storage) |
 | Hash kata sandi lokal memakai SHA-256 | Digest cepat, bukan KDF. Murah ditembus kalau berkas database dipegang orang. Hilang begitu autentikasi pindah ke Supabase |
 | Akurasi langkah di Android | Pedometer butuh development build (Expo Go tidak punya izinnya). Bahkan di dev build, langkah sebelum aplikasi pertama dibuka dan selagi prosesnya mati tidak terhitung — perlu Health Connect untuk menutupnya |
@@ -718,3 +724,7 @@ menurut apa yang menghalanginya.
 | 16 Sep 2026 | Mendaftar dengan email berbeda mengosongkan profil dan catatan pemilik lama | Tanpa itu akun baru mewarisi foto, ukuran tubuh, dan seluruh riwayat akun sebelumnya, karena `user.id` tidak berubah |
 | 16 Sep 2026 | Tanggal disimpan lewat `toIsoDate`, bukan `toISOString()` | `toISOString()` mengonversi ke UTC lebih dulu; tanggal yang dipilih di WIB bisa tersimpan mundur satu hari |
 | 16 Sep 2026 | Kalender tanggal dibuat sendiri, bukan memakai pemilih bawaan sistem | Pemilih bawaan digambar Android/iOS sehingga tidak bisa disamakan dengan palet aplikasi, dan tampil berbeda antar platform. date-fns sudah ada, jadi tidak perlu dependensi baru |
+| 17 Sep 2026 | Email di Edit profil divalidasi dan dinormalkan, plus peringatan saat diubah | Kolom itu identitas masuk, bukan keterangan kontak; sebelumnya mengosongkannya mengunci pemiliknya tanpa peringatan apa pun |
+| 17 Sep 2026 | Tinggi/berat hanya menolak yang MUSTAHIL, bukan yang tidak biasa | Rentang wajarnya masih pertanyaan terbuka; menolak angka yang tidak umum tapi mungkin akan menolak pengguna yang sah |
+| 17 Sep 2026 | Layar lupa kata sandi menampilkan email terdaftar tersamar | Tanpa petunjuk, orang yang lupa emailnya terkunci — sementara penyamaran penuh tidak melindungi apa pun di perangkat yang hanya mengenal satu akun |
+| 17 Sep 2026 | Satu baris `users` per akun, bukan satu per perangkat | Mendaftar akun kedua menghapus akun pertama tanpa peringatan; pemiliknya hanya melihat "email atau kata sandi salah" |
