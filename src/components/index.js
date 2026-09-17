@@ -20,3 +20,4 @@ export { SelectField } from './SelectField';
 export { StatTile } from './StatTile';
 export { StepProgress } from './StepProgress';
 export { Stepper } from './Stepper';
+export { TargetSummary } from './TargetSummary';

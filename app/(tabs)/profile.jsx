@@ -2,9 +2,10 @@ import React from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Avatar, Card, Screen } from '../../src/components';
+import { Avatar, Card, Screen, TargetSummary } from '../../src/components';
 import { colors } from '../../src/theme/colors';
 import { programs, programLabel } from '../../src/data/profile';
+import { dateLabel } from '../../src/lib/dates';
 import { formatNumber } from '../../src/lib/format';
 import { useUser } from '../../src/context/UserContext';
 
@@ -18,7 +19,16 @@ function Stat({ label, value }) {
 }
 
 export default function ProfileScreen() {
-  const { user, updateUser, logout, fullName, age, targetCalories, macroTargets } = useUser();
+  const {
+    user,
+    updateUser,
+    logout,
+    fullName,
+    age,
+    targetCalories,
+    macroTargets,
+    weightPlan,
+  } = useUser();
 
   // Tidak perlu navigasi manual: gate isLoggedIn di (tabs)/_layout mengarahkan
   // ke /welcome begitu status login berubah.
@@ -123,6 +133,37 @@ export default function ProfileScreen() {
               ))}
             </Card>
           </View>
+
+          {/* Hanya muncul kalau targetnya memang ada. Bagian kosong dengan
+              tulisan "belum ada target" cuma menambah panjang layar tanpa
+              memberi apa-apa — tempat mengaturnya ada di Edit profil. */}
+          {weightPlan.targetTerisi ? (
+            <View className="gap-4">
+              <Text className="text-lg font-bold text-ink">Target berat</Text>
+
+              <Text className="-mt-2 text-sm text-ink-muted">
+                {`${user.targetWeight} kg pada ${dateLabel(user.targetDate)}`}
+              </Text>
+
+              {weightPlan.targetKedaluwarsa ? (
+                <Card className="gap-1 p-4">
+                  <Text className="text-sm font-semibold text-ink">
+                    Tanggal targetmu sudah lewat
+                  </Text>
+                  <Text className="text-2xs leading-4 text-ink-muted">
+                    Target kalorimu kembali ke angka pemeliharaan sampai
+                    tanggalnya diperbarui lewat Edit profil.
+                  </Text>
+                </Card>
+              ) : (
+                <TargetSummary
+                  rencana={weightPlan}
+                  proyeksi={weightPlan.proyeksi}
+                  tanggalRealistis={dateLabel(weightPlan.tanggalRealistis)}
+                />
+              )}
+            </View>
+          ) : null}
 
           <View className="gap-4">
             <Text className="text-lg font-bold text-ink">Settings</Text>

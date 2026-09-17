@@ -12,6 +12,8 @@ const COLUMNS = [
   'activity_level',
   'program',
   'target_goal',
+  'target_weight_kg',
+  'target_date',
   'units',
   'avatar_uri',
 ];
@@ -28,6 +30,10 @@ const SEED = {
   activity_level: 'sedentary',
   program: 'bulking',
   target_goal: 'Lebih bugar dan tidur teratur',
+  // Target berat sengaja kosong, bukan ditebak: angka yang tidak pernah
+  // disebut pengguna akan langsung menyetir target kalorinya.
+  target_weight_kg: null,
+  target_date: null,
   units: 'metric',
   avatar_uri: null,
 };
@@ -58,6 +64,8 @@ function toUser(row) {
     activityLevel: row.activity_level,
     program: row.program,
     targetGoal: row.target_goal,
+    targetWeight: row.target_weight_kg,
+    targetDate: row.target_date,
     units: row.units,
     avatar: row.avatar_uri,
   };
@@ -76,6 +84,8 @@ function toColumns(patch) {
     activityLevel: 'activity_level',
     program: 'program',
     targetGoal: 'target_goal',
+    targetWeight: 'target_weight_kg',
+    targetDate: 'target_date',
     units: 'units',
     avatar: 'avatar_uri',
   };
@@ -153,6 +163,8 @@ const PROFIL_BARU = {
   activity_level: 'sedentary',
   program: 'maintenance',
   target_goal: '',
+  target_weight_kg: null,
+  target_date: null,
   units: 'metric',
   avatar_uri: null,
 };

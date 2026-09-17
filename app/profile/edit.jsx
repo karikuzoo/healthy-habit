@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'rea
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { addDays, differenceInCalendarDays, differenceInYears, parseISO } from 'date-fns';
 import {
   ActionSheet,
   Avatar,
@@ -11,19 +12,35 @@ import {
   Field,
   Screen,
   ScreenHeader,
+  TargetSummary,
 } from '../../src/components';
 import { colors } from '../../src/theme/colors';
 import { deleteAvatar, saveAvatar } from '../../src/lib/avatar';
+import { dateLabel, toIsoDate } from '../../src/lib/dates';
 import {
   isChangingLoginEmail,
+  MAX_WEIGHT_KG,
   validateProfileEdit,
 } from '../../src/lib/validateProfile';
+import { rencanaLengkap } from '../../src/lib/weightGoal';
 import { useUser } from '../../src/context/UserContext';
 
 /** Dihitung sekali; membuat Date baru tiap render membingungkan pemilihnya. */
 const TODAY = new Date();
 const OLDEST_BIRTH_DATE = new Date(
   TODAY.getFullYear() - 120,
+  TODAY.getMonth(),
+  TODAY.getDate(),
+);
+
+/** Sama seperti di pendaftaran tahap 2: paling cepat besok, paling lama 3 tahun. */
+const TENGGAT_TERCEPAT = new Date(
+  TODAY.getFullYear(),
+  TODAY.getMonth(),
+  TODAY.getDate() + 1,
+);
+const TENGGAT_TERJAUH = new Date(
+  TODAY.getFullYear() + 3,
   TODAY.getMonth(),
   TODAY.getDate(),
 );
@@ -37,9 +54,11 @@ export default function EditProfileScreen() {
     height: String(user.height),
     weight: String(user.weight),
     targetGoal: user.targetGoal,
+    targetWeight: user.targetWeight == null ? '' : String(user.targetWeight),
   });
 
   const [birthDate, setBirthDate] = useState(user.birthDate ?? null);
+  const [targetDate, setTargetDate] = useState(user.targetDate ?? null);
 
   /** Galat baru muncul setelah percobaan simpan pertama — sama seperti layar masuk. */
   const [errors, setErrors] = useState({});
@@ -152,6 +171,46 @@ export default function EditProfileScreen() {
 
   const openPhotoOptions = () => setSheetOpen(true);
 
+  /**
+   * Dihitung dari isi form, bukan dari `weightPlan` di konteks: yang perlu
+   * dilihat pengguna adalah akibat angka yang SEDANG ia ubah, sebelum
+   * disimpan. Konteks masih memegang nilai lama sampai Simpan ditekan.
+   */
+  const umur = birthDate ? differenceInYears(TODAY, parseISO(birthDate)) : null;
+  const beratKg = Number(form.weight);
+  const targetKg = Number(form.targetWeight);
+
+  const sisaHari = targetDate
+    ? differenceInCalendarDays(parseISO(targetDate), TODAY)
+    : null;
+
+  const { rencana, proyeksi } = rencanaLengkap({
+    beratKg,
+    tinggiCm: Number(form.height),
+    umur,
+    gender: user.gender,
+    activityLevel: user.activityLevel,
+    targetKg,
+    hari: sisaHari,
+  });
+
+  const targetSah = Number.isFinite(targetKg) && targetKg > 0 && targetKg <= MAX_WEIGHT_KG;
+  const targetLengkap = targetSah && Boolean(targetDate);
+  const estimasiSiap = targetLengkap && rencana.kaloriTarget != null;
+
+  /** Lihat catatan yang sama di pendaftaran tahap 2. */
+  const galatTarget =
+    form.targetWeight.trim() && !targetSah
+      ? `Berat target harus lebih dari nol dan paling banyak ${MAX_WEIGHT_KG} kg.`
+      : null;
+
+  const perluTanggal = targetSah && !targetDate;
+
+  const tanggalRealistis =
+    rencana.hariRealistis == null
+      ? null
+      : dateLabel(toIsoDate(addDays(TODAY, rencana.hariRealistis)));
+
   const handleSave = async () => {
     const result = validateProfileEdit(form);
 
@@ -169,6 +228,11 @@ export default function EditProfileScreen() {
       weight: Number(form.weight),
       targetGoal: form.targetGoal,
       birthDate,
+      // Mengosongkan berat target berarti MENCABUT targetnya, dan tanggalnya
+      // ikut dicabut. Menyisakan tanggal tanpa berat hanya akan jadi kolom
+      // yang tidak bisa dipakai menghitung apa-apa.
+      targetWeight: targetLengkap ? targetKg : null,
+      targetDate: targetLengkap ? targetDate : null,
     });
 
     router.back();
@@ -305,6 +369,45 @@ export default function EditProfileScreen() {
             onChangeText={setField('targetGoal')}
             placeholder="Lebih bugar dan tidur teratur"
           />
+
+          <View className="gap-3">
+            <Text className="text-sm font-semibold text-ink">
+              Target berat badan (opsional)
+            </Text>
+
+            <Field
+              label="Berat target"
+              value={form.targetWeight}
+              onChangeText={setField('targetWeight')}
+              error={galatTarget}
+              placeholder="70"
+              suffix="kg"
+              keyboardType="numeric"
+            />
+
+            <DateField
+              label="Ingin tercapai pada"
+              value={targetDate}
+              onChange={setTargetDate}
+              placeholder="Pilih tanggal target"
+              minimumDate={TENGGAT_TERCEPAT}
+              maximumDate={TENGGAT_TERJAUH}
+            />
+
+            <Text className="text-2xs leading-4 text-ink-subtle">
+              {perluTanggal
+                ? 'Pilih tanggalnya juga supaya targetmu bisa dihitung.'
+                : 'Kalau diisi, target kalori harianmu dihitung dari sini — bukan dari program. Kosongkan berat target untuk mencabutnya.'}
+            </Text>
+          </View>
+
+          {estimasiSiap ? (
+            <TargetSummary
+              rencana={rencana}
+              proyeksi={proyeksi}
+              tanggalRealistis={tanggalRealistis}
+            />
+          ) : null}
 
           <Button label="Simpan perubahan" onPress={handleSave} className="mt-2" />
         </View>

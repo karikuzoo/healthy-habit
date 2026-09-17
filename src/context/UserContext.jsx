@@ -6,10 +6,13 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { differenceInYears, format, parseISO } from 'date-fns';
+import { addDays, differenceInCalendarDays, differenceInYears, format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Loading } from '../components/Loading';
+import { toIsoDate } from '../lib/dates';
+import { hitungBmr, hitungTdee } from '../lib/energy';
+import { proyeksiBerat, rencanaTarget } from '../lib/weightGoal';
 import { seedCatalogIfEmpty } from '../db/foods';
 import { seedDemoDayIfEmpty } from '../db/foodLogs';
 import { seedDemoWeekIfEmpty } from '../db/sleepLogs';
@@ -24,15 +27,13 @@ import {
 
 const UserContext = createContext(null);
 
-const ACTIVITY_MULTIPLIERS = {
-  sedentary: 1.2,
-  light: 1.375,
-  moderate: 1.55,
-  active: 1.725,
-  veryActive: 1.9,
-};
-
-/** Selisih kalori dari TDEE untuk tiap program. */
+/**
+ * Selisih kalori dari TDEE untuk tiap program.
+ *
+ * Dipakai hanya ketika pengguna BELUM menyebut berat target. Begitu
+ * targetnya terisi, besar defisitnya dihitung mundur dari target itu dan
+ * angka di bawah tidak lagi ikut campur — lihat `rencanaTarget`.
+ */
 const CALORIE_OFFSET = {
   bulking: 400,
   maintenance: 0,
@@ -149,12 +150,47 @@ export function UserProvider({ children }) {
     const birth = user.birthDate ? parseISO(user.birthDate) : null;
     const age = birth ? differenceInYears(new Date(), birth) : null;
 
-    // Mifflin-St Jeor
-    const base = 10 * user.weight + 6.25 * user.height - 5 * (age ?? 0);
-    const bmr = Math.round(user.gender === 'Laki-Laki' ? base + 5 : base - 161);
+    const bmr = hitungBmr({
+      beratKg: user.weight,
+      tinggiCm: user.height,
+      umur: age,
+      gender: user.gender,
+    });
 
-    const tdee = Math.round(bmr * (ACTIVITY_MULTIPLIERS[user.activityLevel] ?? 1.55));
-    const targetCalories = tdee + (CALORIE_OFFSET[user.program] ?? 0);
+    const tdee = hitungTdee(bmr, user.activityLevel);
+
+    /**
+     * Berat target menyetir target kalori; program hanya jadi cadangan.
+     *
+     * Dulu seluruh defisit ditentukan program: cutting selalu -400, apa pun
+     * berat yang dituju dan kapan. Sekarang pengguna menyebut mau berada di
+     * berat berapa dan kapan, lalu defisit hariannya dihitung mundur dari
+     * situ — dengan batas aman yang dijaga `rencanaTarget`.
+     *
+     * Tanggal target yang sudah lewat membuat `hariKeTarget` nol atau minus,
+     * dan `rencanaTarget` mengembalikan rencana kosong. Itu disengaja: lebih
+     * baik kembali ke kalori pemeliharaan daripada memaksakan defisit dari
+     * tenggat yang sudah basi. Layar bisa membaca `targetKedaluwarsa` untuk
+     * memintanya diperbarui.
+     */
+    const targetTerisi =
+      Number.isFinite(user.targetWeight) && user.targetWeight > 0 && Boolean(user.targetDate);
+
+    const hariKeTarget = user.targetDate
+      ? differenceInCalendarDays(parseISO(user.targetDate), new Date())
+      : null;
+
+    const rencanaBerat = rencanaTarget({
+      beratKg: user.weight,
+      targetKg: user.targetWeight,
+      hari: hariKeTarget,
+      tdee,
+      bmr,
+    });
+
+    const targetCalories = targetTerisi
+      ? rencanaBerat.kaloriTarget
+      : tdee + (CALORIE_OFFSET[user.program] ?? 0);
 
     const [proteinPct, carbsPct, fatPct] =
       MACRO_SPLIT[user.program] ?? MACRO_SPLIT.maintenance;
@@ -175,6 +211,21 @@ export function UserProvider({ children }) {
       bmr,
       tdee,
       targetCalories,
+      weightPlan: {
+        ...rencanaBerat,
+        targetTerisi,
+        targetKedaluwarsa: Boolean(user.targetDate) && hariKeTarget !== null && hariKeTarget < 1,
+        hariKeTarget,
+        tanggalRealistis:
+          rencanaBerat.hariRealistis == null
+            ? null
+            : toIsoDate(addDays(new Date(), rencanaBerat.hariRealistis)),
+        proyeksi: proyeksiBerat({
+          beratKg: user.weight,
+          targetKg: user.targetWeight,
+          lajuKgPerMinggu: rencanaBerat.lajuKgPerMinggu,
+        }),
+      },
       macroTargets: {
         protein: Math.round((targetCalories * proteinPct) / 4),
         carbs: Math.round((targetCalories * carbsPct) / 4),

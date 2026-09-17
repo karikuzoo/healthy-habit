@@ -88,12 +88,12 @@ test('V10 tidak menyentuh template yang sudah ada di perangkat sehat', async () 
 test('migrasi dari nol berhenti di versi yang diumumkan, dan berhenti di situ', async () => {
   const { db, close } = await createTestDb();
 
-  assert.equal((await db.getFirstAsync('PRAGMA user_version')).user_version, 11);
+  assert.equal((await db.getFirstAsync('PRAGMA user_version')).user_version, 12);
 
   // Dijalankan lagi tidak boleh melakukan apa-apa: peluncuran kedua dan
   // seterusnya memanggil migrate() dengan database yang sudah lengkap.
   await migrate(db);
-  assert.equal((await db.getFirstAsync('PRAGMA user_version')).user_version, 11);
+  assert.equal((await db.getFirstAsync('PRAGMA user_version')).user_version, 12);
 
   close();
 });
@@ -147,6 +147,41 @@ test('Simpan latihan dua kali untuk gerakan yang sama tidak lagi gagal', async (
   const plan = await listPlan(db, userId, HARI);
   assert.equal(plan.length, 1, 'rencana lama diganti, bukan ditumpuk');
   assert.equal(plan[0].exerciseId, 'bench-press');
+
+  close();
+});
+
+/**
+ * V12 — kolom berat target dan tenggatnya.
+ *
+ * Yang diuji bukan cuma "kolomnya ada", melainkan bahwa langkahnya aman
+ * diulang. ADD COLUMN tidak punya IF NOT EXISTS di SQLite, jadi kalau
+ * pemeriksaannya salah, peluncuran kedua akan menggagalkan seluruh migrasi.
+ */
+
+test('V12 menambah kolom target dan aman dijalankan dua kali', async () => {
+  const { db, userId, close } = await createTestDb();
+
+  const kolom = await db.getAllAsync('PRAGMA table_info(users)');
+  const nama = kolom.map((k) => k.name);
+  assert.ok(nama.includes('target_weight_kg'));
+  assert.ok(nama.includes('target_date'));
+
+  await db.runAsync(
+    'UPDATE users SET target_weight_kg = ?, target_date = ? WHERE id = ?',
+    [72.5, '2026-12-31', userId],
+  );
+
+  // Dipaksa mengulang langkahnya di database yang kolomnya sudah ada.
+  await db.execAsync('PRAGMA user_version = 11');
+  await migrate(db);
+
+  const row = await db.getFirstAsync(
+    'SELECT target_weight_kg, target_date FROM users WHERE id = ?',
+    [userId],
+  );
+  assert.equal(row.target_weight_kg, 72.5, 'nilai yang sudah ada tidak tersapu');
+  assert.equal(row.target_date, '2026-12-31');
 
   close();
 });

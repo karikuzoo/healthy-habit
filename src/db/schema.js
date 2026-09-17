@@ -21,7 +21,7 @@
 
 export const DATABASE_NAME = "healthyhabit.db";
 
-const SCHEMA_VERSION = 11;
+const SCHEMA_VERSION = 12;
 
 const V1 = `
 PRAGMA journal_mode = 'wal';
@@ -375,6 +375,39 @@ DROP INDEX IF EXISTS idx_workout_plan_unique;
 `;
 
 /**
+ * `ALTER TABLE ... ADD COLUMN` yang aman diulang.
+ *
+ * SQLite tidak punya `IF NOT EXISTS` untuk ADD COLUMN, dan repo ini sudah
+ * pernah menambalnya dengan `try/catch` — cara yang menelan galat lain
+ * sekalian, termasuk yang seharusnya menggagalkan migrasi. `PRAGMA
+ * table_info` menjawab pertanyaannya secara langsung.
+ */
+async function tambahKolom(db, tabel, kolom, definisi) {
+  const kolom_ada = await db.getAllAsync(`PRAGMA table_info(${tabel})`);
+  if (kolom_ada.some((k) => k.name === kolom)) return;
+
+  await db.execAsync(`ALTER TABLE ${tabel} ADD COLUMN ${kolom} ${definisi}`);
+}
+
+/**
+ * V12 — berat target dan tenggat waktunya.
+ *
+ * Ditaruh di `users`, bukan tabel sendiri, karena satu akun hanya punya satu
+ * target yang sedang berjalan. Riwayat target lama belum ada gunanya selama
+ * aplikasi belum menyimpan riwayat berat badan sama sekali.
+ *
+ * Keduanya boleh NULL: target itu pilihan, bukan syarat. Tanpa target,
+ * target kalori kembali dihitung dari program seperti sebelumnya.
+ *
+ * Fungsi, bukan untai SQL seperti migrasi lain, karena ADD COLUMN perlu
+ * diperiksa dulu (lihat `tambahKolom`).
+ */
+async function V12(db) {
+  await tambahKolom(db, 'users', 'target_weight_kg', 'REAL');
+  await tambahKolom(db, 'users', 'target_date', 'TEXT');
+}
+
+/**
  * Dijalankan lewat prop \`onInit\` milik SQLiteProvider, sebelum children render.
  * Versi schema dilacak dengan \`PRAGMA user_version\`.
  */
@@ -463,6 +496,11 @@ export async function migrate(db) {
   if (version === 10) {
     await db.execAsync(V11);
     version = 11;
+  }
+
+  if (version === 11) {
+    await V12(db);
+    version = 12;
   }
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }
