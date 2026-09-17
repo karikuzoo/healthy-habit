@@ -14,6 +14,10 @@ import {
 } from '../../src/components';
 import { colors } from '../../src/theme/colors';
 import { deleteAvatar, saveAvatar } from '../../src/lib/avatar';
+import {
+  isChangingLoginEmail,
+  validateProfileEdit,
+} from '../../src/lib/validateProfile';
 import { useUser } from '../../src/context/UserContext';
 
 /** Dihitung sekali; membuat Date baru tiap render membingungkan pemilihnya. */
@@ -37,7 +41,15 @@ export default function EditProfileScreen() {
 
   const [birthDate, setBirthDate] = useState(user.birthDate ?? null);
 
-  const setField = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
+  /** Galat baru muncul setelah percobaan simpan pertama — sama seperti layar masuk. */
+  const [errors, setErrors] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const setField = (key) => (value) => {
+    const next = { ...form, [key]: value };
+    setForm(next);
+    if (submitted) setErrors(validateProfileEdit(next).errors);
+  };
 
   const [busy, setBusy] = useState(false);
 
@@ -141,14 +153,20 @@ export default function EditProfileScreen() {
   const openPhotoOptions = () => setSheetOpen(true);
 
   const handleSave = async () => {
+    const result = validateProfileEdit(form);
+
+    setSubmitted(true);
+    setErrors(result.errors);
+    if (!result.valid) return;
+
     const [firstName, ...rest] = form.name.trim().split(' ');
 
     await updateUser({
-      firstName: firstName ?? user.firstName,
+      firstName,
       lastName: rest.join(' '),
       email: form.email,
-      height: Number(form.height) || user.height,
-      weight: Number(form.weight) || user.weight,
+      height: Number(form.height),
+      weight: Number(form.weight),
       targetGoal: form.targetGoal,
       birthDate,
     });
@@ -213,17 +231,38 @@ export default function EditProfileScreen() {
             label="Nama lengkap"
             value={form.name}
             onChangeText={setField('name')}
+            error={errors.name}
             placeholder="Nama lengkap"
           />
 
-          <Field
-            label="Email"
-            value={form.email}
-            onChangeText={setField('email')}
-            placeholder="nama@email.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+          <View className="gap-2">
+            <Field
+              label="Email"
+              value={form.email}
+              onChangeText={setField('email')}
+              error={errors.email}
+              placeholder="nama@email.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            {/* Kolom ini bukan sekadar keterangan kontak — ia dipakai untuk
+                masuk. Hampir tidak ada yang menduganya, jadi dikatakan
+                tepat saat alamatnya diubah. */}
+            {isChangingLoginEmail(form.email, user.email) ? (
+              <View className="flex-row items-start gap-2 rounded-xl bg-steps-soft px-3 py-2">
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={14}
+                  color={colors.steps.DEFAULT}
+                />
+                <Text className="flex-1 text-2xs leading-4 text-steps">
+                  Email ini dipakai untuk masuk. Setelah disimpan, gunakan
+                  alamat baru ini saat masuk berikutnya.
+                </Text>
+              </View>
+            ) : null}
+          </View>
 
           {/* Umur di tab Profil dan BMR di target kalori sama-sama
               diturunkan dari sini, jadi salah pilih saat mendaftar harus bisa
@@ -242,6 +281,7 @@ export default function EditProfileScreen() {
               label="Tinggi"
               value={form.height}
               onChangeText={setField('height')}
+              error={errors.height}
               placeholder="165"
               suffix="cm"
               keyboardType="numeric"
@@ -251,6 +291,7 @@ export default function EditProfileScreen() {
               label="Berat"
               value={form.weight}
               onChangeText={setField('weight')}
+              error={errors.weight}
               placeholder="58"
               suffix="kg"
               keyboardType="numeric"

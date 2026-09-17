@@ -4,6 +4,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
 /**
+ * Setelan yang WAJIB untuk setiap kolom kata sandi.
+ *
+ * Bawaan `TextInput` adalah `autoCapitalize="sentences"` — keyboard
+ * mengapitalkan huruf pertama. Untuk kata sandi itu berarti yang tersimpan
+ * saat mendaftar bisa berbeda dari yang diketik saat masuk, dan gejalanya
+ * menyesatkan: "email atau kata sandi salah" padahal jari mengetik hal yang
+ * sama persis.
+ *
+ * Ditaruh SESUDAH `inputProps` supaya tidak bisa tertimpa tanpa sengaja dari
+ * layar pemanggil, dan supaya tidak ada yang perlu mengingatnya lagi.
+ */
+const SECURE_INPUT_PROPS = {
+  autoCapitalize: 'none',
+  autoCorrect: false,
+  autoComplete: 'off',
+  spellCheck: false,
+};
+
+/**
  * Input berlabel. `secure` menampilkan tombol mata untuk toggle visibilitas.
  * `icon` adalah nama ikon Ionicons yang muncul di sisi kiri.
  *
@@ -50,6 +69,7 @@ export function Field({
           multiline={multiline}
           textAlignVertical={multiline ? 'top' : 'center'}
           {...inputProps}
+          {...(secure ? SECURE_INPUT_PROPS : null)}
         />
 
         {suffix ? (
