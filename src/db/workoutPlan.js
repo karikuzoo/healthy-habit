@@ -63,7 +63,7 @@ export async function getTodayPlan(db, userId, plannedOn = todayLocal()) {
   return listPlan(db, userId, plannedOn);
 }
 
-/** Satu gerakan pada rencana hari ini, atau null kalau tidak ada di rencana. */
+/** Mengosongkan rencana hari ini (soft delete semua barisnya). */
 export async function clearTodayPlan(db, userId, plannedOn = todayLocal()) {
   const timestamp = nowIso();
   await db.runAsync(
@@ -74,34 +74,21 @@ export async function clearTodayPlan(db, userId, plannedOn = todayLocal()) {
   );
 }
 
-export async function getPlanExercise(
-  db,
-  userId,
-  exerciseId,
-  plannedOn = todayLocal(),
-) {
-  const row = await db.getFirstAsync(
-    `SELECT ${COLUMNS} FROM workout_plan_exercises
-      WHERE user_id = ? AND planned_on = ? AND exercise_id = ?
-        AND deleted_at IS NULL`,
-    [userId, plannedOn, exerciseId],
-  );
-
-  return row ? toPlanItem(row) : null;
-}
-
 /**
- * Menambahkan gerakan ke rencana, atau mengubah resepnya kalau sudah ada.
+ * Menambahkan satu gerakan ke rencana hari ini.
  *
- * Satu fungsi untuk keduanya, bukan dua, karena dari sudut pandang pengguna
- * memang satu hal: "gerakan ini, sekian set, sekian repetisi". Menambahkan
- * gerakan yang sudah ada di rencana tidak menggandakannya — indeks unik
- * (user, tanggal, gerakan) membuat baris lamanya yang diperbarui.
+ * Selalu baris baru, tidak pernah menimpa yang sudah ada. Sejak migrasi V5
+ * membuang indeks unik (pengguna, tanggal, gerakan), satu gerakan memang
+ * boleh muncul dua kali dalam sehari — misalnya Shoulder Press di awal dan
+ * di akhir sesi. Tiap salinan punya `id` sendiri, dan `id` itulah yang
+ * dipakai layar untuk menghapus salinan tertentu.
  *
- * Gerakan yang pernah dihapus lalu ditambahkan lagi masuk ke urutan paling
- * bawah, sama seperti gerakan yang benar-benar baru.
+ * Dulu fungsi ini sebuah upsert `ON CONFLICT(user_id, planned_on,
+ * exercise_id)`. Klausa itu menuntut UNIQUE constraint yang cocok, jadi
+ * begitu V5 jalan SQLite menolaknya di tahap prepare dan menambah gerakan
+ * gagal total — bukan cuma yang duplikat.
  */
-export async function savePlanExercise(
+export async function addPlanExercise(
   db,
   userId,
   { exerciseId, sets, reps },
@@ -119,18 +106,7 @@ export async function savePlanExercise(
   await db.runAsync(
     `INSERT INTO workout_plan_exercises
        (${COLUMNS}, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(user_id, planned_on, exercise_id) DO UPDATE SET
-       sets       = excluded.sets,
-       reps       = excluded.reps,
-       -- gerakan yang masih hidup tetap di tempatnya; yang dihapus lalu
-       -- ditambahkan lagi pindah ke urutan paling bawah
-       position   = CASE WHEN workout_plan_exercises.deleted_at IS NULL
-                         THEN workout_plan_exercises.position
-                         ELSE excluded.position END,
-       deleted_at = NULL,
-       updated_at = excluded.updated_at,
-       synced_at  = NULL`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       newId(),
       userId,
@@ -144,21 +120,21 @@ export async function savePlanExercise(
   );
 }
 
-/** Mengeluarkan gerakan dari rencana (soft delete, supaya ikut tersinkron). */
-export async function removePlanExercise(
-  db,
-  userId,
-  exerciseId,
-  plannedOn = todayLocal(),
-) {
+/**
+ * Mengeluarkan SATU salinan gerakan dari rencana (soft delete, supaya ikut
+ * tersinkron).
+ *
+ * Dikunci ke `planId`, bukan `exerciseId`: dengan gerakan ganda diizinkan,
+ * menghapus berdasarkan gerakan akan menghapus semua salinannya sekaligus.
+ */
+export async function removePlanExercise(db, planId) {
   const timestamp = nowIso();
 
   await db.runAsync(
     `UPDATE workout_plan_exercises
         SET deleted_at = ?, updated_at = ?, synced_at = NULL
-      WHERE user_id = ? AND planned_on = ? AND exercise_id = ?
-        AND deleted_at IS NULL`,
-    [timestamp, timestamp, userId, plannedOn, exerciseId],
+      WHERE id = ? AND deleted_at IS NULL`,
+    [timestamp, timestamp, planId],
   );
 }
 

@@ -144,7 +144,7 @@ export function WorkoutBuilderProvider({ children }) {
       updateAmount,
       clear,
       loadFromPlan,
-      /** Bentuk siap tulis untuk `savePlanExercise` — reps digabung jadi satu teks. */
+      /** Bentuk siap tulis untuk `addPlanExercise` — reps digabung jadi satu teks. */
       toPlanRows: () =>
         items.map((item) => ({
           exerciseId: item.exerciseId,

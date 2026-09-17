@@ -21,7 +21,7 @@
 
 export const DATABASE_NAME = "healthyhabit.db";
 
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 11;
 
 const V1 = `
 PRAGMA journal_mode = 'wal';
@@ -305,6 +305,76 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_terdaftar
 `;
 
 /**
+ * V10 — menambal perangkat yang tidak pernah kebagian tabel template.
+ *
+ * V4 pernah punya DUA arti. Di branch ini V4 adalah `workout_templates`;
+ * di branch lain V4 adalah ALTER kolom kata sandi di `users`. Perangkat
+ * yang sempat menjalankan versi yang kedua berhenti di `user_version = 4`,
+ * lalu pemutakhiran berikutnya langsung lompat ke `version === 4 -> V5`.
+ * Akibatnya tabel template TIDAK PERNAH dibuat di perangkat itu, dan
+ * gejalanya baru muncul jauh belakangan sebagai "no such table:
+ * workout_templates" saat menyimpan latihan.
+ *
+ * Ditulis idempoten (`IF NOT EXISTS`) karena langkah ini juga dilewati
+ * perangkat yang tabelnya sudah ada — mayoritas — dan di sana ia harus
+ * tidak melakukan apa-apa. Isinya sengaja DISALIN dari V4, bukan memanggil
+ * V4 kembali: migrasi lama adalah catatan sejarah yang tidak boleh berubah
+ * arti, sementara penambal ini punya tugasnya sendiri.
+ */
+const V10 = `
+CREATE TABLE IF NOT EXISTS workout_templates (
+  id           TEXT PRIMARY KEY NOT NULL,
+  user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name         TEXT NOT NULL,
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL,
+  synced_at    TEXT,
+  deleted_at   TEXT
+);
+
+CREATE TABLE IF NOT EXISTS workout_template_exercises (
+  id           TEXT PRIMARY KEY NOT NULL,
+  template_id  TEXT NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+  exercise_id  TEXT NOT NULL,
+  sets         INTEGER NOT NULL DEFAULT 3,
+  reps         TEXT NOT NULL,
+  position     INTEGER NOT NULL DEFAULT 0,
+  updated_at   TEXT NOT NULL,
+  synced_at    TEXT,
+  deleted_at   TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_workout_templates_user
+  ON workout_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_workout_template_exercises_parent
+  ON workout_template_exercises(template_id);
+`;
+
+/**
+ * V11 — memastikan indeks unik rencana benar-benar hilang.
+ *
+ * V5 sudah membuangnya, tapi perangkat sungguhan membuktikan langkah itu
+ * tidak jalan di semua tempat: sebuah perangkat di versi 10 masih menolak
+ * INSERT dengan "UNIQUE constraint failed: workout_plan_exercises.user_id,
+ * ...planned_on, ...exercise_id". Riwayat V4 yang pernah punya dua arti
+ * membuat sebagian perangkat melompati langkah yang bertetangga dengannya,
+ * dan `PRAGMA user_version` tidak menyimpan jejak langkah mana yang
+ * benar-benar dijalankan — jadi tidak ada cara memeriksanya selain memastikan.
+ *
+ * Pelajarannya dipakai di sini: langkah ini MENJAMIN keadaan akhir, bukan
+ * mengandaikan langkah sebelumnya sudah jalan. `IF EXISTS` membuatnya tidak
+ * melakukan apa-apa di perangkat yang indeksnya memang sudah tiada.
+ *
+ * Tanpa ini, "Simpan latihan" gagal di perangkat yang terdampak: alur itu
+ * lewat `replaceTodayPlanWithTemplate`, yang soft-delete lalu INSERT ulang.
+ * Baris yang di-soft-delete masih dilihat indeks unik, jadi menyimpan
+ * latihan untuk gerakan yang sama dua kali sehari langsung ditolak.
+ */
+const V11 = `
+DROP INDEX IF EXISTS idx_workout_plan_unique;
+`;
+
+/**
  * Dijalankan lewat prop \`onInit\` milik SQLiteProvider, sebelum children render.
  * Versi schema dilacak dengan \`PRAGMA user_version\`.
  */
@@ -383,6 +453,16 @@ export async function migrate(db) {
   if (version === 8) {
     await db.execAsync(V9);
     version = 9;
+  }
+
+  if (version === 9) {
+    await db.execAsync(V10);
+    version = 10;
+  }
+
+  if (version === 10) {
+    await db.execAsync(V11);
+    version = 11;
   }
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }

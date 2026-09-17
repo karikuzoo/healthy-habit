@@ -327,7 +327,7 @@ export default function WorkoutScreen() {
             // Dikeluarkan dari rencana sekaligus dari catatan hari ini. Kalau
             // hanya catatannya yang dihapus, gerakannya muncul lagi di rencana
             // begitu layar dibuka ulang.
-            await removePlanExercise(db, user.id, exercise.id);
+            await removePlanExercise(db, exercise.planId);
             await deleteTodayExercise(db, user.id, exercise.id);
             await refresh();
           },

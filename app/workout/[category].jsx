@@ -67,8 +67,10 @@ export default function CategoryScreen() {
   }, [allExercises, query]);
 
   /**
-   * Gerakan yang sudah ada di rencana ditandai, bukan disembunyikan: pengguna
-   * tetap boleh membukanya untuk mengubah set atau repetisinya.
+   * Dipakai hanya untuk memperjelas label aksesibilitas ("tambahkan lagi").
+   * Gerakan yang sudah ada di rencana tidak disembunyikan dan tidak lagi
+   * berubah jadi aksi "ubah": sejak V5 mengizinkan gerakan ganda, mengetuknya
+   * berarti menambahkan salinan kedua.
    */
   const [planned, setPlanned] = useState(() => new Set());
 
@@ -146,7 +148,7 @@ export default function CategoryScreen() {
                     isBuilderFlow
                       ? `Pilih ${exercise.name}`
                       : added
-                        ? `Ubah ${exercise.name} di rencana`
+                        ? `Tambahkan ${exercise.name} lagi ke rencana`
                         : `Tambahkan ${exercise.name} ke rencana`
                   }
                   className="active:opacity-80"
@@ -174,17 +176,9 @@ export default function CategoryScreen() {
                       ) : null}
                     </View>
                     <Ionicons
-                      name={
-                        added && !isBuilderFlow
-                          ? "create-outline"
-                          : "add-circle-outline"
-                      }
+                      name="add-circle-outline"
                       size={22}
-                      color={
-                        added && !isBuilderFlow
-                          ? colors.ink.subtle
-                          : colors.brand.DEFAULT
-                      }
+                      color={colors.brand.DEFAULT}
                     />
                   </Card>
                 </Pressable>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,7 +13,6 @@ import {
   Button,
   Card,
   ExerciseMedia,
-  Loading,
   Screen,
   ScreenHeader,
   Segmented,
@@ -28,7 +27,7 @@ import {
   repUnits,
   resolveExercise,
 } from "../../src/data/workout";
-import { getPlanExercise, savePlanExercise } from "../../src/db/workoutPlan";
+import { addPlanExercise } from "../../src/db/workoutPlan";
 import { useUser } from "../../src/context/UserContext";
 
 /**
@@ -38,16 +37,15 @@ import { useUser } from "../../src/context/UserContext";
  * Sebelumnya memilih gerakan dari katalog langsung membuka sesi latihan,
  * sehingga rencana hari ini tidak pernah benar-benar bisa disusun.
  *
- * Satu layar dipakai untuk menambah maupun mengubah: yang membedakan hanya
- * apakah gerakannya sudah ada di rencana. Dengan begitu menambahkan gerakan
- * yang sudah ada tidak berakhir sebagai gerakan kembar, melainkan membuka
- * resep yang sedang berlaku.
+ * Layar ini hanya menambah. Sejak migrasi V5 mengizinkan satu gerakan muncul
+ * lebih dari sekali dalam sehari, "gerakan yang sudah ada" bukan lagi satu
+ * baris yang bisa dibuka ulang — menambahkan gerakan yang sama memang
+ * menghasilkan salinan baru di urutan bawah.
  *
  * Alur "Mulai Latihan" (Jenis Workout -> Jenis Otot -> daftar gerakan) tidak
  * lagi lewat sini — gerakan langsung masuk staging dengan resep bawaan, dan
  * repetisinya diatur inline di layar "Rincian Pemilihan gerakan". Layar ini
- * sekarang hanya dipakai untuk MENGUBAH gerakan yang sudah ada di rencana
- * (ikon pensil di tab Workout).
+ * sekarang hanya dipakai alur "Tambahkan gerakan" dari daftar kategori.
  */
 
 export default function ConfigureExerciseScreen() {
@@ -57,40 +55,22 @@ export default function ConfigureExerciseScreen() {
 
   const exercise = resolveExercise(exerciseId);
 
-  const [ready, setReady] = useState(false);
-  const [inPlan, setInPlan] = useState(false);
-  const [sets, setSets] = useState("3");
-  const [amount, setAmount] = useState("12");
-  const [unit, setUnit] = useState("repetisi");
+  /**
+   * Nilai awal selalu dari bawaan katalog, bukan dari baris rencana yang
+   * sudah ada.
+   *
+   * Dulu layar ini mencari gerakan yang sama di rencana lalu berubah jadi
+   * mode "ubah". Itu masuk akal selagi satu gerakan hanya boleh muncul sekali
+   * sehari; sejak V5 mengizinkan gerakan ganda, "baris yang mana" tidak lagi
+   * punya jawaban tunggal. Jadi layar ini murni menambah — mengubah salinan
+   * tertentu nanti butuh pintu masuk sendiri yang membawa `planId`.
+   */
+  const defaults = parseReps(exercise?.reps ?? "12 repetisi");
+
+  const [sets, setSets] = useState(() => String(exercise?.sets ?? 3));
+  const [amount, setAmount] = useState(() => String(defaults.amount));
+  const [unit, setUnit] = useState(() => defaults.unit);
   const [saving, setSaving] = useState(false);
-
-  // Resep yang sedang berlaku jadi nilai awal; gerakan baru memakai bawaan
-  // katalog. Sengaja tidak useFocusEffect: kembali ke layar ini tidak boleh
-  // menimpa angka yang sedang diketik pengguna.
-  useEffect(() => {
-    if (!exercise) {
-      setReady(true);
-      return;
-    }
-
-    let active = true;
-    getPlanExercise(db, user.id, exercise.id).then((planned) => {
-      if (!active) return;
-
-      const recipe = planned ?? exercise;
-      const parsed = parseReps(recipe.reps);
-
-      setInPlan(Boolean(planned));
-      setSets(String(recipe.sets));
-      setAmount(String(parsed.amount));
-      setUnit(parsed.unit);
-      setReady(true);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [db, user.id, exercise?.id]);
 
   const range = repRanges[unit];
 
@@ -124,15 +104,6 @@ export default function ConfigureExerciseScreen() {
     );
   }
 
-  if (!ready) {
-    return (
-      <Screen>
-        <ScreenHeader title="Atur gerakan" />
-        <Loading />
-      </Screen>
-    );
-  }
-
   const safeSets = Math.min(Math.max(Number(sets) || 1, 1), 10);
   const safeAmount = Math.min(
     Math.max(Number(amount) || range.min, range.min),
@@ -144,7 +115,7 @@ export default function ConfigureExerciseScreen() {
     if (saving) return;
     setSaving(true);
 
-    await savePlanExercise(db, user.id, {
+    await addPlanExercise(db, user.id, {
       exerciseId: exercise.id,
       sets: safeSets,
       reps,
@@ -165,7 +136,7 @@ export default function ConfigureExerciseScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title={inPlan ? "Ubah gerakan" : "Atur gerakan"} />
+      <ScreenHeader title="Atur gerakan" />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -242,22 +213,10 @@ export default function ConfigureExerciseScreen() {
             </View>
 
             <Button
-              label={
-                saving
-                  ? "Menyimpan..."
-                  : inPlan
-                    ? "Simpan perubahan"
-                    : "Tambahkan ke rencana"
-              }
+              label={saving ? "Menyimpan..." : "Tambahkan ke rencana"}
               onPress={handleSave}
               className={saving ? "opacity-50" : ""}
             />
-
-            {inPlan ? (
-              <Text className="text-center text-2xs text-ink-subtle">
-                Gerakan ini sudah ada di rencana hari ini.
-              </Text>
-            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
