@@ -93,7 +93,7 @@ export default function CategoryScreen() {
       >
         <View className="gap-3 px-5 pb-8 pt-2">
           <Text className="mb-1 text-sm text-ink-muted">
-            Pilih gerakan untuk mengatur set dan repetisinya.
+            Pilih gerakan untuk mengatur repetisinya.
           </Text>
 
           <Field
@@ -159,8 +159,6 @@ export default function CategoryScreen() {
                       <Text className="text-base font-bold text-ink">
                         {exercise.name}
                       </Text>
-
-
 
                       {equipmentLabel(exercise) ? (
                         <View className="mt-1 flex-row items-center gap-1">

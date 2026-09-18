@@ -17,10 +17,6 @@ import { DATABASE_NAME, migrate } from "../src/db/schema";
  *   sebelum children render.
  * - SafeAreaProvider di luar UserProvider supaya penanda tunggu selagi profil
  *   dibaca tetap ter-render di dalam struktur yang benar.
- * - WorkoutBuilderProvider di dalam UserProvider (tidak butuh profil, tapi
- *   biar tetap satu blok dengan provider state lain) dan di luar Stack,
- *   supaya draft "Mulai Latihan" tetap hidup selagi pengguna berpindah
- *   antar layar Jenis Workout / Jenis Otot / daftar gerakan.
  *
  * Rute tidak perlu didaftarkan satu per satu — expo-router menemukannya dari
  * struktur folder, dan `screenOptions` sudah mematikan header untuk semuanya.
@@ -30,7 +26,7 @@ export default function RootLayout() {
     <Suspense fallback={<Loading />}>
       <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrate} useSuspense>
         <SafeAreaProvider>
-          <StatusBar style="dark" />
+          <StatusBar style="dark" translucent backgroundColor="transparent" />
           <UserProvider>
             <WorkoutBuilderProvider>
               <Stack screenOptions={{ headerShown: false }} />

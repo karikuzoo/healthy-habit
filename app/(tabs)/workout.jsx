@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, Text, View, BackHandler } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
@@ -18,6 +18,7 @@ import {
 import {
   deleteTodayExercise,
   listTodayExercises,
+  logExerciseSession,
 } from "../../src/db/workoutLogs";
 import { getTodayPlan, removePlanExercise, clearTodayPlan } from "../../src/db/workoutPlan";
 import { getSleepForDay } from "../../src/db/sleepLogs";
@@ -54,10 +55,14 @@ function SummaryItem({ value, label }) {
  * Tujuh tanggal minggu berjalan, buat strip tanggal di kepala layar Workout.
  * Murni tampilan — belum ada fitur menyusun rencana per tanggal tertentu,
  * jadi selain hari ini tanggalnya tidak bisa ditekan untuk pindah rencana.
+ *
+ * Hari ini selalu berada di kolom ke-2 (indeks 1), sehingga strip bergeser
+ * seiring berjalannya waktu: [kemarin, HARI INI, besok, ...].
  */
 function weekDates() {
-  const start = startOfWeek(new Date(), { locale: idLocale });
-  return Array.from({ length: 7 }, (_, index) => addDays(start, index));
+  const today = new Date();
+  const yesterday = addDays(today, -1);
+  return Array.from({ length: 7 }, (_, index) => addDays(yesterday, index));
 }
 
 function DayStrip() {
@@ -244,6 +249,20 @@ export default function WorkoutScreen() {
     }, [refresh, expand]),
   );
 
+  useEffect(() => {
+    const onBackPress = () => {
+      if (expanded) {
+        setExpanded(false);
+        router.setParams({ expand: "" });
+        return true;
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => subscription.remove();
+  }, [expanded]);
+
   /**
    * "Alarm" waktu istirahat habis. Project ini belum punya library audio
    * (expo-av/expo-audio), jadi dipakai getaran berulang + banner singkat —
@@ -268,7 +287,9 @@ export default function WorkoutScreen() {
     }
 
     const interval = setInterval(() => {
-      setElapsedSeconds((seconds) => seconds + 1);
+      if (sessionState === "running") {
+        setElapsedSeconds((seconds) => seconds + 1);
+      }
 
       if (sessionState === "resting") {
         setRestSecondsLeft((secondsLeft) => {
@@ -313,6 +334,53 @@ export default function WorkoutScreen() {
     setRestSecondsLeft(0);
   };
 
+  const plan = exercises ?? [];
+  const estimate = planEstimate(plan.length);
+  const isEmpty = exercises !== null && plan.length === 0;
+  const showList = !isEmpty && expanded;
+
+  // Auto-stop jika waktu latihan melebihi estimasi
+  useEffect(() => {
+    if (
+      sessionState !== "idle" &&
+      estimate.durationMinutes > 0 &&
+      elapsedSeconds >= estimate.durationMinutes * 60
+    ) {
+      handleStopSession();
+    }
+  }, [elapsedSeconds, sessionState, estimate.durationMinutes]);
+
+  const handleStopSession = async () => {
+    if (sessionState === "idle" || plan.length === 0) return;
+
+    // Asumsikan sesi selesai. Bagi rata durasi dan kalori ke semua gerakan.
+    // Jika tidak ada durasi (langsung stop), minimal tercatat 0 detik.
+    const durationPerExercise = Math.floor(elapsedSeconds / plan.length);
+    const caloriesPerExercise = Math.floor(estimate.calories / plan.length);
+
+    for (const exercise of plan) {
+      await logExerciseSession(db, user.id, {
+        exerciseId: exercise.id,
+        name: exercise.name,
+        setsPlanned: exercise.sets,
+        setsCompleted: exercise.sets, // dianggap tuntas
+        reps: exercise.reps,
+        position: exercise.position,
+        durationSeconds: durationPerExercise,
+        calories: caloriesPerExercise,
+      });
+    }
+
+    setSessionState("idle");
+    setElapsedSeconds(0);
+    setRestSecondsLeft(0);
+    setExpanded(false);
+    router.setParams({ expand: "" });
+    
+    await refresh();
+    Alert.alert("Latihan Selesai", "Sesi latihanmu berhasil disimpan ke riwayat.");
+  };
+
   // Handler untuk konfirmasi dan menghapus gerakan
   const handleDeleteExercise = (exercise) => {
     Alert.alert(
@@ -336,10 +404,6 @@ export default function WorkoutScreen() {
     );
   };
 
-  const plan = exercises ?? [];
-  const estimate = planEstimate(plan.length);
-  const isEmpty = exercises !== null && plan.length === 0;
-  const showList = !isEmpty && expanded;
 
   return (
     <Screen>
@@ -357,7 +421,7 @@ export default function WorkoutScreen() {
                 accessibilityLabel="Kembali ke ringkasan latihan"
                 className="mt-0.5 h-9 w-9 items-center justify-center rounded-full bg-surface-sunken active:opacity-70"
               >
-                <Ionicons name="arrow-back" size={18} color={colors.ink} />
+                <Ionicons name="arrow-back" size={18} color={colors.ink.DEFAULT} />
               </Pressable>
             ) : null}
 
@@ -488,42 +552,44 @@ export default function WorkoutScreen() {
             </View>
           </ScrollView>
 
-          <View className="gap-2 px-5 pb-3 pt-1">
-            <View className="flex-row gap-3">
-              <Button
-                variant="soft"
+          <View className="px-5 pb-3 pt-1">
+            <View className="flex-row gap-3 items-center justify-center">
+              <Pressable
                 onPress={handleResetSession}
-                className="flex-1 flex-row items-center justify-center gap-1.5"
+                accessibilityRole="button"
+                className="h-14 w-14 items-center justify-center rounded-full bg-brand-soft active:opacity-80"
               >
-                <Ionicons name="refresh" size={16} color={colors.brand.dark} />
-                <Text className="text-base font-bold text-brand-dark">
-                  RESET
-                </Text>
-              </Button>
+                <Ionicons name="refresh" size={24} color={colors.brand.dark} />
+              </Pressable>
 
-              <Button
+              <Pressable
                 onPress={handlePrimaryPress}
-                className="flex-[2] flex-row items-center justify-center gap-1.5"
+                accessibilityRole="button"
+                className="h-14 flex-1 flex-row items-center justify-center rounded-full bg-brand active:opacity-80"
               >
-                <Ionicons
-                  name={
-                    sessionState === "running"
-                      ? "pause"
-                      : sessionState === "resting"
-                        ? "time"
-                        : "play"
-                  }
-                  size={16}
-                  color="#FFFFFF"
-                />
-                <Text className="text-base font-bold text-white">
-                  {sessionState === "running"
-                    ? "Pause"
-                    : sessionState === "resting"
-                      ? `Istirahat ${restSecondsLeft}s`
-                      : "Mulai Latihan"}
-                </Text>
-              </Button>
+                {sessionState === "resting" ? (
+                  <Text className="text-xl font-bold text-white">
+                    {restSecondsLeft}
+                  </Text>
+                ) : (
+                  <Ionicons
+                    name={sessionState === "running" ? "pause" : "play"}
+                    size={24}
+                    color="#FFFFFF"
+                  />
+                )}
+              </Pressable>
+
+              <Pressable
+                onPress={handleStopSession}
+                disabled={sessionState === "idle" && elapsedSeconds === 0}
+                accessibilityRole="button"
+                className={`h-14 w-14 items-center justify-center rounded-full bg-danger active:opacity-80 ${
+                  sessionState === "idle" && elapsedSeconds === 0 ? "opacity-50" : ""
+                }`}
+              >
+                <Ionicons name="square" size={20} color="#FFFFFF" />
+              </Pressable>
             </View>
           </View>
         </>
