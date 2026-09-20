@@ -106,24 +106,35 @@ export function WorkoutBuilderProvider({ children }) {
   /** Dipanggil setelah "Simpan Latihan" berhasil menulis semuanya ke rencana. */
   const clear = useCallback(() => setItems([]), []);
 
+  /**
+   * Dipakai saat membuka template lewat "Edit" — mengisi draft dari gerakan
+   * yang sudah tersimpan di sana.
+   *
+   * `getTemplateExercises` sekarang SUDAH menggabungkan tiap baris dengan
+   * katalog (lihat `src/db/workoutTemplates.js`), jadi `ex.name`/`ex.category`
+   * selalu terisi dan `ex.exerciseId` selalu kunci katalog yang benar —
+   * bukan `ex.id` (yang sebelumnya malah dibaca duluan lewat `ex.id ||
+   * ex.exercise_id`, padahal `id` di situ adalah ID baris template, BUKAN
+   * ID gerakan katalog. Itu sebabnya nama & gambar gerakan sempat hilang:
+   * ExerciseMedia dikasih ID acak yang tidak dikenali katalog sama sekali.)
+   */
   const loadFromPlan = useCallback((planExercises) => {
     setItems(
       planExercises.map((ex) => {
-        // Parse "12 repetisi" atau "20 menit"
-        const parts = ex.reps.split(" ");
+        const parts = String(ex.reps ?? "").split(" ");
         const amount = parseInt(parts[0], 10) || 0;
         const unit = parts[1] || "repetisi";
 
         return {
-          key: `${ex.id || ex.exercise_id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          exerciseId: ex.id || ex.exercise_id, // depends on if it's joined data or raw db
+          key: `${ex.exerciseId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          exerciseId: ex.exerciseId,
           name: ex.name,
-          category: ex.category || "unknown", // category isn't in plan usually, but we have name
+          category: ex.category,
           sets: ex.sets || 3,
           amount,
           unit,
         };
-      })
+      }),
     );
   }, []);
 
