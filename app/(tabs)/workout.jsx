@@ -150,8 +150,9 @@ function planProgramName(plan) {
 }
 
 /** Kartu ringkas: seluruh rencana dibungkus jadi satu program, tap untuk buka daftarnya. */
-function ProgramSummaryCard({ plan, onPress }) {
+function ProgramSummaryCard({ plan, templateName, onPress }) {
   const estimate = planEstimate(plan.length);
+  const displayName = templateName || planProgramName(plan);
 
   return (
     <Pressable
@@ -165,7 +166,7 @@ function ProgramSummaryCard({ plan, onPress }) {
         </View>
         <View className="flex-1">
           <Text className="text-base font-bold text-ink">
-            {planProgramName(plan)}
+            {displayName}
           </Text>
           <Text className="mt-0.5 text-sm text-ink-muted">
             {estimate.durationMinutes} min | {estimate.calories} Kkal
@@ -223,7 +224,18 @@ export default function WorkoutScreen() {
   const [showRestPicker, setShowRestPicker] = useState(false);
   const [restAlarmVisible, setRestAlarmVisible] = useState(false);
 
+  const [activeTemplateName, setActiveTemplateName] = useState(null);
+
   const refresh = useCallback(async () => {
+    let tplName = null;
+    if (user.activeTemplateId) {
+      const rows = await db.getAllAsync(
+        `SELECT name FROM workout_templates WHERE id = ?`,
+        [user.activeTemplateId]
+      );
+      if (rows.length > 0) tplName = rows[0].name;
+    }
+
     const [plan, done, sleep] = await Promise.all([
       getTodayPlan(db, user.id),
       listTodayExercises(db, user.id),
@@ -233,7 +245,8 @@ export default function WorkoutScreen() {
     setExercises(resolvePlan(plan));
     setProgress(done);
     setSleepMinutes(sleep?.durationMinutes ?? null);
-  }, [db, user.id]);
+    setActiveTemplateName(tplName);
+  }, [db, user.id, user.activeTemplateId]);
 
   const { expand } = useLocalSearchParams();
 
@@ -426,7 +439,9 @@ export default function WorkoutScreen() {
             ) : null}
 
             <View className="flex-1">
-              <Text className="text-3xl font-bold text-ink">Workout</Text>
+              <Text className="text-3xl font-bold text-ink">
+                {showList ? (activeTemplateName || planProgramName(plan)) : "Workout"}
+              </Text>
               <Text className="mt-1 text-sm text-ink-muted">
                 {showList
                   ? `${todayWorkout.level} • ${estimate.durationMinutes} menit • ${todayWorkout.intensity}`
@@ -481,8 +496,13 @@ export default function WorkoutScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() => {
-                  loadFromPlan(plan);
+                onPress={async () => {
+                  let tplName = "";
+                  if (user.activeTemplateId) {
+                    const rows = await db.getAllAsync(`SELECT name FROM workout_templates WHERE id = ?`, [user.activeTemplateId]);
+                    if (rows.length > 0) tplName = rows[0].name;
+                  }
+                  loadFromPlan(plan, user.activeTemplateId || null, tplName);
                   router.push("/workout/review");
                 }}
                 hitSlop={8}
@@ -603,6 +623,7 @@ export default function WorkoutScreen() {
             {!isEmpty ? (
               <ProgramSummaryCard
                 plan={plan}
+                templateName={activeTemplateName}
                 onPress={() => setExpanded(true)}
               />
             ) : null}

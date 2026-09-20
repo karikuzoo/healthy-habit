@@ -25,6 +25,8 @@ const WorkoutBuilderContext = createContext(null);
  */
 export function WorkoutBuilderProvider({ children }) {
   const [items, setItems] = useState([]);
+  const [templateId, setTemplateId] = useState(null);
+  const [templateName, setTemplateName] = useState("");
 
   const addExercise = useCallback((exercise) => {
     const isCardio = exercise.category === "cardio";
@@ -104,30 +106,29 @@ export function WorkoutBuilderProvider({ children }) {
   }, []);
 
   /** Dipanggil setelah "Simpan Latihan" berhasil menulis semuanya ke rencana. */
-  const clear = useCallback(() => setItems([]), []);
+  const clear = useCallback(() => {
+    setItems([]);
+    setTemplateId(null);
+    setTemplateName("");
+  }, []);
 
   /**
    * Dipakai saat membuka template lewat "Edit" — mengisi draft dari gerakan
    * yang sudah tersimpan di sana.
-   *
-   * `getTemplateExercises` sekarang SUDAH menggabungkan tiap baris dengan
-   * katalog (lihat `src/db/workoutTemplates.js`), jadi `ex.name`/`ex.category`
-   * selalu terisi dan `ex.exerciseId` selalu kunci katalog yang benar —
-   * bukan `ex.id` (yang sebelumnya malah dibaca duluan lewat `ex.id ||
-   * ex.exercise_id`, padahal `id` di situ adalah ID baris template, BUKAN
-   * ID gerakan katalog. Itu sebabnya nama & gambar gerakan sempat hilang:
-   * ExerciseMedia dikasih ID acak yang tidak dikenali katalog sama sekali.)
    */
-  const loadFromPlan = useCallback((planExercises) => {
+  const loadFromPlan = useCallback((planExercises, tplId = null, tplName = "") => {
+    setTemplateId(tplId);
+    setTemplateName(tplName);
     setItems(
       planExercises.map((ex) => {
         const parts = String(ex.reps ?? "").split(" ");
         const amount = parseInt(parts[0], 10) || 0;
         const unit = parts[1] || "repetisi";
+        const exId = ex.exerciseId || ex.id;
 
         return {
-          key: `${ex.exerciseId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          exerciseId: ex.exerciseId,
+          key: `${exId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          exerciseId: exId,
           name: ex.name,
           category: ex.category,
           sets: ex.sets || 3,
@@ -146,6 +147,9 @@ export function WorkoutBuilderProvider({ children }) {
   const value = useMemo(
     () => ({
       items,
+      templateId,
+      templateName,
+      setTemplateName,
       totalSets,
       isSelected,
       toggleExercise,
@@ -165,6 +169,8 @@ export function WorkoutBuilderProvider({ children }) {
     }),
     [
       items,
+      templateId,
+      templateName,
       totalSets,
       isSelected,
       toggleExercise,

@@ -17,7 +17,6 @@ import { saveTemplate, updateTemplate } from "../../src/db/workoutTemplates";
 import { replaceTodayPlanWithTemplate } from "../../src/db/workoutPlan";
 import { useUser } from "../../src/context/UserContext";
 import { useWorkoutBuilder } from "../../src/context/WorkoutBuilderContext";
-import { useLocalSearchParams } from "expo-router";
 
 /** Jarak naik/turun tiap satuan — repetisi 1 per ketuk, detik/menit 5 per ketuk. */
 const STEP_BY_UNIT = { repetisi: 1, detik: 5, menit: 5 };
@@ -67,9 +66,11 @@ function InlineStepper({ amount, unit, onChange }) {
 export default function WorkoutReviewScreen() {
   const db = useSQLiteContext();
   const { user } = useUser();
-  const { templateId, templateName: initialName } = useLocalSearchParams();
   const {
     items,
+    templateId,
+    templateName,
+    setTemplateName,
     totalSets,
     duplicateExercise,
     removeExercise,
@@ -79,7 +80,6 @@ export default function WorkoutReviewScreen() {
   } = useWorkoutBuilder();
 
   const [saving, setSaving] = React.useState(false);
-  const [templateName, setTemplateName] = React.useState(initialName || "");
   const estimate = planEstimate(items.length);
 
   const handleRemove = (item) => {

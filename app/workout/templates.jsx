@@ -16,7 +16,7 @@ import { useWorkoutBuilder } from "../../src/context/WorkoutBuilderContext";
 
 export default function WorkoutTemplatesScreen() {
   const db = useSQLiteContext();
-  const { user } = useUser();
+  const { user, updateUser } = useUser();
   const { loadFromPlan } = useWorkoutBuilder();
   const [templates, setTemplates] = useState([]);
 
@@ -27,10 +27,8 @@ export default function WorkoutTemplatesScreen() {
 
   const handleEditTemplate = async (template) => {
     const exercises = await getTemplateExercises(db, template.id);
-    loadFromPlan(exercises);
-    router.push(
-      `/workout/review?templateId=${template.id}&templateName=${encodeURIComponent(template.name)}`,
-    );
+    loadFromPlan(exercises, template.id, template.name);
+    router.push("/workout/review");
   };
 
   useFocusEffect(
@@ -51,6 +49,11 @@ export default function WorkoutTemplatesScreen() {
           onPress: async () => {
             const exercises = await getTemplateExercises(db, template.id);
             await replaceTodayPlanWithTemplate(db, user.id, exercises);
+            // Menandai template ini sebagai yang aktif, supaya kalau nanti
+            // dihapus, rencana hari ini tahu harus pindah ke template lain
+            // (atau ikut kosong) — lihat `deleteTemplate` di
+            // `workoutTemplates.js`.
+            await updateUser({ activeTemplateId: template.id });
             router.navigate("/(tabs)/workout?expand=true");
           },
         },

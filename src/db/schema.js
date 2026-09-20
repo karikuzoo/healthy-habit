@@ -21,7 +21,7 @@
 
 export const DATABASE_NAME = "healthyhabit.db";
 
-const SCHEMA_VERSION = 12;
+const SCHEMA_VERSION = 13;
 
 const V1 = `
 PRAGMA journal_mode = 'wal';
@@ -403,8 +403,23 @@ async function tambahKolom(db, tabel, kolom, definisi) {
  * diperiksa dulu (lihat `tambahKolom`).
  */
 async function V12(db) {
-  await tambahKolom(db, 'users', 'target_weight_kg', 'REAL');
-  await tambahKolom(db, 'users', 'target_date', 'TEXT');
+  await tambahKolom(db, "users", "target_weight_kg", "REAL");
+  await tambahKolom(db, "users", "target_date", "TEXT");
+}
+
+/**
+ * V13 — template mana yang sedang "aktif" jadi rencana hari ini.
+ *
+ * NULL berarti rencana hari ini disusun manual (lewat "Mulai Latihan"),
+ * bukan hasil menerapkan template — jadi menghapus template apa pun tidak
+ * boleh mengubah rencana macam itu.
+ *
+ * Kalau terisi dan template itu dihapus, rencana hari ini ikut mengikuti:
+ * pindah ke template lain yang masih ada, atau ikut kosong kalau tidak ada
+ * sisa (lihat `deleteTemplate` di `workoutTemplates.js`).
+ */
+async function V13(db) {
+  await tambahKolom(db, "users", "active_template_id", "TEXT");
 }
 
 /**
@@ -469,17 +484,23 @@ export async function migrate(db) {
   if (version === 6) {
     try {
       await db.runAsync(`ALTER TABLE users ADD COLUMN password_hash TEXT`);
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      /* ignore */
+    }
     try {
       await db.runAsync(`ALTER TABLE users ADD COLUMN password_salt TEXT`);
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      /* ignore */
+    }
     version = 7;
   }
 
   if (version === 7) {
     try {
       await db.runAsync(`ALTER TABLE users ADD COLUMN registered_at TEXT`);
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      /* ignore */
+    }
     version = 8;
   }
 
@@ -501,6 +522,11 @@ export async function migrate(db) {
   if (version === 11) {
     await V12(db);
     version = 12;
+  }
+
+  if (version === 12) {
+    await V13(db);
+    version = 13;
   }
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }

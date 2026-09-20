@@ -1,5 +1,7 @@
 import { newId, nowIso } from "./helpers";
 import { resolveExercise } from "../data/workout";
+import { replaceTodayPlanWithTemplate } from "./workoutPlan";
+import { updateUserRow } from "./users";
 
 const TEMPLATE_COLUMNS = `id, user_id, name, created_at, updated_at`;
 const EXERCISE_COLUMNS = `id, template_id, exercise_id, sets, reps, position`;
@@ -88,8 +90,37 @@ export async function saveTemplate(db, userId, name, exercises) {
   return templateId;
 }
 
+/**
+ * Menghapus satu template.
+ *
+ * Kalau yang dihapus BUKAN template yang sedang aktif
+ * (`users.active_template_id`), cukup hapus template ini beserta
+ * gerakannya — rencana hari ini maupun template lain tidak disentuh sama
+ * sekali (lihat catatan panjang di versi sebelumnya soal kenapa ini penting).
+ *
+ * Kalau yang dihapus ADALAH template aktif, rencana hari ini otomatis ikut
+ * berubah: pindah ke template lain yang masih ada (yang paling baru
+ * dibuat), atau ikut kosong kalau memang tidak ada template tersisa —
+ * sesuai yang diminta pengguna.
+ *
+ * BATASAN yang perlu diketahui: `active_template_id` hanya berubah lewat
+ * "Terapkan Template" (lihat `handleApplyTemplate` di `templates.jsx`) dan
+ * fungsi ini. Kalau pengguna mengedit rencana hari ini secara manual
+ * (tambah/hapus satu gerakan lewat layar lain) SETELAH menerapkan template,
+ * `active_template_id` tetap menganggap template itu aktif — jadi
+ * menghapus template itu nanti akan MENIMPA edit manual tadi dengan isi
+ * template pengganti. Ini belum ditangani; kalau jadi masalah nyata,
+ * `active_template_id` perlu ikut dikosongkan begitu ada edit manual di
+ * luar "Terapkan Template".
+ */
 export async function deleteTemplate(db, userId, templateId) {
   const timestamp = nowIso();
+
+  const user = await db.getFirstAsync(
+    `SELECT active_template_id FROM users WHERE id = ?`,
+    [userId],
+  );
+  const wasActive = user?.active_template_id === templateId;
 
   await db.withTransactionAsync(async () => {
     // 1. Hapus dari workout_templates
@@ -100,22 +131,34 @@ export async function deleteTemplate(db, userId, templateId) {
     );
 
     // 2. Hapus dari workout_template_exercises
-    //
-    // SENGAJA berhenti di sini. Template hanyalah cetakan/preset — rencana
-    // hari ini (workout_plan_exercises) sudah jadi salinan independen sejak
-    // template-nya diterapkan. Sebelumnya fungsi ini juga menghapus gerakan
-    // dari rencana hari ini berdasarkan kecocokan exercise_id, tanpa cek
-    // apakah gerakan itu memang berasal dari template ini — akibatnya kalau
-    // gerakan yang sama dipakai di template lain (dan template lain itu
-    // masih ada), gerakan itu ikut hilang dari rencana hari ini juga.
-    // Menghapus gerakan dari rencana yang aktif itu tugas layar
-    // [category].jsx / review.jsx, bukan tugas menghapus template.
     await db.runAsync(
       `UPDATE workout_template_exercises SET deleted_at = ?, updated_at = ?, synced_at = NULL
        WHERE template_id = ?`,
       [timestamp, timestamp, templateId],
     );
   });
+
+  if (!wasActive) return;
+
+  // Template yang dihapus tadi ada template aktif -> rencana hari ini ikut
+  // menyesuaikan. `listTemplates` sudah menyaring deleted_at IS NULL dan
+  // sudah ORDER BY created_at DESC, jadi baris pertama otomatis kandidat
+  // pengganti yang paling baru dibuat.
+  const remaining = await listTemplates(db, userId);
+  const replacement = remaining[0];
+
+  if (replacement) {
+    const exercises = await getTemplateExercises(db, replacement.id);
+    await replaceTodayPlanWithTemplate(db, userId, exercises);
+    await updateUserRow(db, userId, { activeTemplateId: replacement.id });
+  } else {
+    // Tidak ada template tersisa -> rencana hari ini ikut kosong.
+    // `replaceTodayPlanWithTemplate` dengan daftar kosong tetap menjalankan
+    // langkah "soft-delete semua rencana hari ini"-nya, jadi aman dipakai
+    // ulang di sini tanpa menduplikasi query.
+    await replaceTodayPlanWithTemplate(db, userId, []);
+    await updateUserRow(db, userId, { activeTemplateId: null });
+  }
 }
 
 export async function updateTemplate(db, templateId, name, exercises) {

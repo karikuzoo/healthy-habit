@@ -1,41 +1,45 @@
-import { buildUpdate, newId, nowIso } from './helpers';
-import { createSalt, hashPassword, verifyPassword } from '../lib/password';
+import { buildUpdate, newId, nowIso } from "./helpers";
+import { createSalt, hashPassword, verifyPassword } from "../lib/password";
 
 const COLUMNS = [
-  'first_name',
-  'last_name',
-  'email',
-  'gender',
-  'birth_date',
-  'height_cm',
-  'weight_kg',
-  'activity_level',
-  'program',
-  'target_goal',
-  'target_weight_kg',
-  'target_date',
-  'units',
-  'avatar_uri',
+  "first_name",
+  "last_name",
+  "email",
+  "gender",
+  "birth_date",
+  "height_cm",
+  "weight_kg",
+  "activity_level",
+  "program",
+  "target_goal",
+  "target_weight_kg",
+  "target_date",
+  "units",
+  "avatar_uri",
+  "active_template_id",
 ];
 
 /** Profil awal saat aplikasi pertama kali dibuka. */
 const SEED = {
-  first_name: 'Padlan',
-  last_name: 'Prabowo',
-  email: 'padlan@email.com',
-  gender: 'Laki-Laki',
-  birth_date: '1998-08-12',
+  first_name: "Padlan",
+  last_name: "Prabowo",
+  email: "padlan@email.com",
+  gender: "Laki-Laki",
+  birth_date: "1998-08-12",
   height_cm: 182,
   weight_kg: 78,
-  activity_level: 'sedentary',
-  program: 'bulking',
-  target_goal: 'Lebih bugar dan tidur teratur',
+  activity_level: "sedentary",
+  program: "bulking",
+  target_goal: "Lebih bugar dan tidur teratur",
   // Target berat sengaja kosong, bukan ditebak: angka yang tidak pernah
   // disebut pengguna akan langsung menyetir target kalorinya.
   target_weight_kg: null,
   target_date: null,
-  units: 'metric',
+  units: "metric",
   avatar_uri: null,
+  // Rencana hari ini masih bawaan aplikasi (bukan hasil template), jadi
+  // belum ada template aktif sama sekali di awal.
+  active_template_id: null,
 };
 
 /**
@@ -47,7 +51,9 @@ const SEED = {
  * memakai alamat yang sama, dan menolaknya hanya akan membingungkan.
  */
 function normalizeEmail(email) {
-  return String(email ?? '').trim().toLowerCase();
+  return String(email ?? "")
+    .trim()
+    .toLowerCase();
 }
 
 /** Baris DB (snake_case) -> bentuk yang dipakai UI (camelCase). */
@@ -68,26 +74,28 @@ function toUser(row) {
     targetDate: row.target_date,
     units: row.units,
     avatar: row.avatar_uri,
+    activeTemplateId: row.active_template_id,
   };
 }
 
 /** Bentuk UI (camelCase) -> nama kolom DB. */
 function toColumns(patch) {
   const map = {
-    firstName: 'first_name',
-    lastName: 'last_name',
-    email: 'email',
-    gender: 'gender',
-    birthDate: 'birth_date',
-    height: 'height_cm',
-    weight: 'weight_kg',
-    activityLevel: 'activity_level',
-    program: 'program',
-    targetGoal: 'target_goal',
-    targetWeight: 'target_weight_kg',
-    targetDate: 'target_date',
-    units: 'units',
-    avatar: 'avatar_uri',
+    firstName: "first_name",
+    lastName: "last_name",
+    email: "email",
+    gender: "gender",
+    birthDate: "birth_date",
+    height: "height_cm",
+    weight: "weight_kg",
+    activityLevel: "activity_level",
+    program: "program",
+    targetGoal: "target_goal",
+    targetWeight: "target_weight_kg",
+    targetDate: "target_date",
+    units: "units",
+    avatar: "avatar_uri",
+    activeTemplateId: "active_template_id",
   };
 
   const out = {};
@@ -95,7 +103,8 @@ function toColumns(patch) {
     // Email selalu dinormalkan di sini, bukan di layar pemanggil. Ia adalah
     // identitas masuk, dan satu jalur tulis yang melewatkannya sudah cukup
     // untuk membuat pemiliknya tidak bisa masuk lagi.
-    if (map[key]) out[map[key]] = key === 'email' ? normalizeEmail(value) : value;
+    if (map[key])
+      out[map[key]] = key === "email" ? normalizeEmail(value) : value;
   }
   return out;
 }
@@ -108,7 +117,7 @@ function toColumns(patch) {
  */
 export async function ensureUser(db) {
   const existing = await db.getFirstAsync(
-    'SELECT * FROM users WHERE deleted_at IS NULL LIMIT 1',
+    "SELECT * FROM users WHERE deleted_at IS NULL LIMIT 1",
   );
   if (existing) return toUser(existing);
 
@@ -116,15 +125,16 @@ export async function ensureUser(db) {
   const timestamp = nowIso();
 
   await db.runAsync(
-    `INSERT INTO users (id, ${COLUMNS.join(', ')}, updated_at)
-     VALUES (?, ${COLUMNS.map(() => '?').join(', ')}, ?)`,
+    `INSERT INTO users (id, ${COLUMNS.join(", ")}, updated_at)
+     VALUES (?, ${COLUMNS.map(() => "?").join(", ")}, ?)`,
     [id, ...COLUMNS.map((column) => SEED[column]), timestamp],
   );
 
-  const created = await db.getFirstAsync('SELECT * FROM users WHERE id = ?', [id]);
+  const created = await db.getFirstAsync("SELECT * FROM users WHERE id = ?", [
+    id,
+  ]);
   return toUser(created);
 }
-
 
 /**
  * Apakah sudah ada akun yang BENAR-BENAR didaftarkan di perangkat ini.
@@ -156,16 +166,16 @@ export async function hasRegisteredAccount(db) {
  * target kalori menjadi NaN. Keduanya langsung ditimpa di tahap 2 pendaftaran.
  */
 const PROFIL_BARU = {
-  gender: 'Laki-Laki',
+  gender: "Laki-Laki",
   birth_date: null,
   height_cm: 170,
   weight_kg: 65,
-  activity_level: 'sedentary',
-  program: 'maintenance',
-  target_goal: '',
+  activity_level: "sedentary",
+  program: "maintenance",
+  target_goal: "",
   target_weight_kg: null,
   target_date: null,
-  units: 'metric',
+  units: "metric",
   avatar_uri: null,
 };
 
@@ -188,7 +198,10 @@ const PROFIL_BARU = {
  * langkahnya ikut terpisah dengan sendirinya. Tidak ada lagi data yang perlu
  * disingkirkan saat berganti akun.
  */
-export async function registerAccount(db, { email, password, firstName, lastName }) {
+export async function registerAccount(
+  db,
+  { email, password, firstName, lastName },
+) {
   const salt = await createSalt();
   const hash = await hashPassword(password, salt);
   const timestamp = nowIso();
@@ -222,8 +235,8 @@ export async function registerAccount(db, { email, password, firstName, lastName
               synced_at     = NULL
         WHERE id = ?`,
       [
-        String(firstName ?? '').trim(),
-        String(lastName ?? '').trim(),
+        String(firstName ?? "").trim(),
+        String(lastName ?? "").trim(),
         nextEmail,
         salt,
         hash,
@@ -236,13 +249,13 @@ export async function registerAccount(db, { email, password, firstName, lastName
     const columns = Object.keys(PROFIL_BARU);
     await db.runAsync(
       `INSERT INTO users
-         (id, first_name, last_name, email, ${columns.join(', ')},
+         (id, first_name, last_name, email, ${columns.join(", ")},
           password_salt, password_hash, registered_at, updated_at)
-       VALUES (?, ?, ?, ?, ${columns.map(() => '?').join(', ')}, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ${columns.map(() => "?").join(", ")}, ?, ?, ?, ?)`,
       [
         id,
-        String(firstName ?? '').trim(),
-        String(lastName ?? '').trim(),
+        String(firstName ?? "").trim(),
+        String(lastName ?? "").trim(),
         nextEmail,
         ...columns.map((c) => PROFIL_BARU[c]),
         salt,
@@ -253,7 +266,9 @@ export async function registerAccount(db, { email, password, firstName, lastName
     );
   }
 
-  const updated = await db.getFirstAsync('SELECT * FROM users WHERE id = ?', [id]);
+  const updated = await db.getFirstAsync("SELECT * FROM users WHERE id = ?", [
+    id,
+  ]);
   return toUser(updated);
 }
 
@@ -280,12 +295,16 @@ export async function verifyCredentials(db, { email, password }) {
 
   if (!row) {
     const ada = await hasRegisteredAccount(db);
-    return { ok: false, reason: ada ? 'kredensial-salah' : 'belum-terdaftar' };
+    return { ok: false, reason: ada ? "kredensial-salah" : "belum-terdaftar" };
   }
 
-  const cocok = await verifyPassword(password, row.password_salt, row.password_hash);
+  const cocok = await verifyPassword(
+    password,
+    row.password_salt,
+    row.password_hash,
+  );
 
-  if (!cocok) return { ok: false, reason: 'kredensial-salah' };
+  if (!cocok) return { ok: false, reason: "kredensial-salah" };
 
   return { ok: true, user: toUser(row) };
 }
@@ -318,7 +337,7 @@ export async function resetPassword(db, { email, password }) {
 
   if (!row) {
     const ada = await hasRegisteredAccount(db);
-    return { ok: false, reason: ada ? 'email-tidak-cocok' : 'belum-terdaftar' };
+    return { ok: false, reason: ada ? "email-tidak-cocok" : "belum-terdaftar" };
   }
 
   const salt = await createSalt();
@@ -362,16 +381,16 @@ export async function registeredEmailHints(db) {
 
 function maskEmail(value) {
   const email = normalizeEmail(value);
-  if (!email.includes('@')) return null;
+  if (!email.includes("@")) return null;
 
-  const [local, domain] = email.split('@');
+  const [local, domain] = email.split("@");
 
   // Bagian lokal yang pendek disamarkan seluruhnya — menampilkan 1 dari 2
   // huruf hampir sama saja dengan menampilkan semuanya.
   const masked =
     local.length <= 3
-      ? '•'.repeat(local.length)
-      : `${local[0]}${'•'.repeat(local.length - 2)}${local[local.length - 1]}`;
+      ? "•".repeat(local.length)
+      : `${local[0]}${"•".repeat(local.length - 2)}${local[local.length - 1]}`;
 
   return `${masked}@${domain}`;
 }
@@ -380,13 +399,18 @@ function maskEmail(value) {
 export async function updateUserRow(db, id, patch) {
   const columnPatch = toColumns(patch);
   if (Object.keys(columnPatch).length === 0) {
-    const unchanged = await db.getFirstAsync('SELECT * FROM users WHERE id = ?', [id]);
+    const unchanged = await db.getFirstAsync(
+      "SELECT * FROM users WHERE id = ?",
+      [id],
+    );
     return toUser(unchanged);
   }
 
   const { clause, values } = buildUpdate(COLUMNS, columnPatch);
   await db.runAsync(`UPDATE users SET ${clause} WHERE id = ?`, [...values, id]);
 
-  const updated = await db.getFirstAsync('SELECT * FROM users WHERE id = ?', [id]);
+  const updated = await db.getFirstAsync("SELECT * FROM users WHERE id = ?", [
+    id,
+  ]);
   return toUser(updated);
 }
