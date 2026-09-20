@@ -230,7 +230,7 @@ export default function WorkoutScreen() {
     let tplName = null;
     if (user.activeTemplateId) {
       const rows = await db.getAllAsync(
-        `SELECT name FROM workout_templates WHERE id = ?`,
+        `SELECT name FROM workout_templates WHERE id = ? AND deleted_at IS NULL`,
         [user.activeTemplateId]
       );
       if (rows.length > 0) tplName = rows[0].name;
@@ -499,7 +499,7 @@ export default function WorkoutScreen() {
                 onPress={async () => {
                   let tplName = "";
                   if (user.activeTemplateId) {
-                    const rows = await db.getAllAsync(`SELECT name FROM workout_templates WHERE id = ?`, [user.activeTemplateId]);
+                    const rows = await db.getAllAsync(`SELECT name FROM workout_templates WHERE id = ? AND deleted_at IS NULL`, [user.activeTemplateId]);
                     if (rows.length > 0) tplName = rows[0].name;
                   }
                   loadFromPlan(plan, user.activeTemplateId || null, tplName);

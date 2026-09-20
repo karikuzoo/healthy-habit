@@ -71,7 +71,10 @@ export default function WorkoutTemplatesScreen() {
           text: "Hapus",
           style: "destructive",
           onPress: async () => {
-            await deleteTemplate(db, user.id, template.id);
+            const result = await deleteTemplate(db, user.id, template.id);
+            if (result.changed) {
+              await updateUser({ activeTemplateId: result.activeTemplateId });
+            }
             loadTemplates();
           },
         },

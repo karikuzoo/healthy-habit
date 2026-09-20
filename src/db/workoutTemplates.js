@@ -138,7 +138,7 @@ export async function deleteTemplate(db, userId, templateId) {
     );
   });
 
-  if (!wasActive) return;
+  if (!wasActive) return { changed: false };
 
   // Template yang dihapus tadi ada template aktif -> rencana hari ini ikut
   // menyesuaikan. `listTemplates` sudah menyaring deleted_at IS NULL dan
@@ -151,6 +151,7 @@ export async function deleteTemplate(db, userId, templateId) {
     const exercises = await getTemplateExercises(db, replacement.id);
     await replaceTodayPlanWithTemplate(db, userId, exercises);
     await updateUserRow(db, userId, { activeTemplateId: replacement.id });
+    return { changed: true, activeTemplateId: replacement.id };
   } else {
     // Tidak ada template tersisa -> rencana hari ini ikut kosong.
     // `replaceTodayPlanWithTemplate` dengan daftar kosong tetap menjalankan
@@ -158,6 +159,7 @@ export async function deleteTemplate(db, userId, templateId) {
     // ulang di sini tanpa menduplikasi query.
     await replaceTodayPlanWithTemplate(db, userId, []);
     await updateUserRow(db, userId, { activeTemplateId: null });
+    return { changed: true, activeTemplateId: null };
   }
 }
 
