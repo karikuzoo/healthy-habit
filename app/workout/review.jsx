@@ -65,7 +65,7 @@ function InlineStepper({ amount, unit, onChange }) {
 
 export default function WorkoutReviewScreen() {
   const db = useSQLiteContext();
-  const { user } = useUser();
+  const { user, updateUser } = useUser();
   const {
     items,
     templateId,
@@ -104,14 +104,21 @@ export default function WorkoutReviewScreen() {
     const nameToSave =
       templateName.trim() === "" ? "Custom Template" : templateName.trim();
 
-    // Save to templates
-    if (templateId) {
-      await updateTemplate(db, templateId, nameToSave, toPlanRows());
-    } else {
-      await saveTemplate(db, user.id, nameToSave, toPlanRows());
-    }
+    // Save to templates — baik bikin baru maupun edit, ID hasilnya SELALU
+    // dijadikan template aktif (lihat updateUser di bawah). Sebelumnya
+    // langkah ini tidak ada sama sekali, jadi tab Workout tetap menunjuk ke
+    // activeTemplateId yang lama/basi walau pengguna baru saja menyimpan
+    // template lain dengan nama baru — makanya nama yang tampil di header
+    // tidak pernah sesuai dengan yang baru disimpan.
+    const savedTemplateId = templateId
+      ? await updateTemplate(db, templateId, nameToSave, toPlanRows()).then(
+          () => templateId,
+        )
+      : await saveTemplate(db, user.id, nameToSave, toPlanRows());
+
     // Also set it as today's plan
     await replaceTodayPlanWithTemplate(db, user.id, toPlanRows());
+    await updateUser({ activeTemplateId: savedTemplateId });
 
     clear();
     // Kembali ke tab Workout, dan request agar daftar diexpand
